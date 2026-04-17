@@ -74,8 +74,8 @@ export function calculateDailyStats(records: { type: string, timestamp: Date | s
       elapsedWorkMins++;
     }
 
-    const hour = current.getHours();
-    const isNight = hour >= 22 || hour < 5;
+    const jstHour = (current.getUTCHours() + 9) % 24;
+    const isNight = jstHour >= 22 || jstHour < 5;
 
     if (!isBreakMin && isNight) {
       nightMinutes++;

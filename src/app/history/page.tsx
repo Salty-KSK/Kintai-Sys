@@ -15,24 +15,24 @@ export default async function HistoryPage() {
 
   const userId = (session.user as any).id;
 
-  // 締め日ロジック (前月26日 〜 当月25日)
+  // 締め日ロジック (前月26日 〜 当月25日) - JST強制
   const now = new Date();
-  const bizNow = new Date(now);
-  if (bizNow.getHours() < 5) bizNow.setDate(bizNow.getDate() - 1);
+  const jstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000); // JST計算用の仮想UTCオブジェクト
+  if (jstNow.getUTCHours() < 5) jstNow.setUTCDate(jstNow.getUTCDate() - 1);
 
-  const currentYear = bizNow.getFullYear();
-  const currentMonth = bizNow.getMonth(); // 0-indexed
-  const currentDate = bizNow.getDate();
+  const currentYear = jstNow.getUTCFullYear();
+  const currentMonth = jstNow.getUTCMonth(); // 0-indexed
+  const currentDate = jstNow.getUTCDate();
 
   let periodStart: Date;
   let periodEnd: Date;
 
   if (currentDate >= 26) {
-    periodStart = new Date(currentYear, currentMonth, 26, 5, 0, 0, 0);
-    periodEnd = new Date(currentYear, currentMonth + 1, 26, 4, 59, 59, 999);
+    periodStart = new Date(Date.UTC(currentYear, currentMonth, 26, 5 - 9, 0, 0, 0));
+    periodEnd = new Date(Date.UTC(currentYear, currentMonth + 1, 26, 4 - 9, 59, 59, 999));
   } else {
-    periodStart = new Date(currentYear, currentMonth - 1, 26, 5, 0, 0, 0);
-    periodEnd = new Date(currentYear, currentMonth, 26, 4, 59, 59, 999);
+    periodStart = new Date(Date.UTC(currentYear, currentMonth - 1, 26, 5 - 9, 0, 0, 0));
+    periodEnd = new Date(Date.UTC(currentYear, currentMonth, 26, 4 - 9, 59, 59, 999));
   }
 
   let records: any[] = [];
@@ -51,12 +51,19 @@ export default async function HistoryPage() {
     });
   }
 
-  // Business Day (5:00 ~ 28:59) でグループ化
+  // Business Day (5:00 ~ 28:59) でグループ化 (JST強制)
   const groupedRecords: Record<string, any[]> = {};
   records.forEach(r => {
-    const d = new Date(r.timestamp);
-    if (d.getHours() < 5) d.setDate(d.getDate() - 1);
-    const dateStr = d.toLocaleDateString('ja-JP');
+    // タイムスタンプに9時間足して、UTCのメソッドでJSTとして扱う
+    const d = new Date(r.timestamp.getTime() + 9 * 60 * 60 * 1000);
+    if (d.getUTCHours() < 5) d.setUTCDate(d.getUTCDate() - 1);
+    
+    // YYYY/MM/DD フォーマット
+    const yyyy = d.getUTCFullYear();
+    const mm = d.getUTCMonth() + 1;
+    const dd = d.getUTCDate();
+    const dateStr = `${yyyy}/${mm}/${dd}`;
+    
     if (!groupedRecords[dateStr]) groupedRecords[dateStr] = [];
     groupedRecords[dateStr].push(r);
   });
@@ -143,16 +150,16 @@ export default async function HistoryPage() {
                       <div className="flex flex-wrap gap-4 text-sm font-medium items-center text-muted mt-2">
                         <span className="text-foreground font-bold" style={{ fontSize: '1.05em' }}>
                           出勤: {stats.clockIn ? (() => {
-                            const d = new Date(stats.clockIn);
-                            const h = d.getHours() < 5 ? d.getHours() + 24 : d.getHours();
-                            return `${h}:${d.getMinutes().toString().padStart(2, '0')}`;
+                            const d = new Date(stats.clockIn.getTime() + 9 * 60 * 60 * 1000);
+                            const h = d.getUTCHours() < 5 ? d.getUTCHours() + 24 : d.getUTCHours();
+                            return `${h}:${d.getUTCMinutes().toString().padStart(2, '0')}`;
                           })() : '--:--'}
                         </span>
                         <span className="text-foreground font-bold" style={{ fontSize: '1.05em' }}>
                           退勤: {stats.clockOut ? (() => {
-                            const d = new Date(stats.clockOut);
-                            const h = d.getHours() < 5 ? d.getHours() + 24 : d.getHours();
-                            return `${h}:${d.getMinutes().toString().padStart(2, '0')}`;
+                            const d = new Date(stats.clockOut.getTime() + 9 * 60 * 60 * 1000);
+                            const h = d.getUTCHours() < 5 ? d.getUTCHours() + 24 : d.getUTCHours();
+                            return `${h}:${d.getUTCMinutes().toString().padStart(2, '0')}`;
                           })() : '--:--'}
                         </span>
                         
