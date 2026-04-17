@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { clock, deleteRecord, updateRecordTime, updateBreakTime } from "./actions";
-import { Clock, LogOut, Trash2, Pencil, Check, X } from "lucide-react";
+import { clock, deleteRecord, updateRecordTime, updateBreakTime, setDailyStatus } from "./actions";
+import { Clock, LogOut, Trash2, Pencil, Check, X, CalendarCheck } from "lucide-react";
 
 export default function ClientDashboard({ initialRecords }: { initialRecords: any[] }) {
   const [isPending, startTransition] = useTransition();
@@ -44,6 +44,17 @@ export default function ClientDashboard({ initialRecords }: { initialRecords: an
     });
   };
 
+  // Find existing special status
+  const statusRecord = initialRecords.find(r => r.type && r.type.startsWith("STATUS_"));
+  const currentStatus = statusRecord ? statusRecord.type : "NONE";
+
+  const handleStatusChange = (val: string) => {
+    startTransition(async () => {
+      const typeStr = val === "NONE" ? null : val;
+      await setDailyStatus(new Date().toISOString(), typeStr);
+    });
+  };
+
   const hasPunchedIn = initialRecords.some(r => r.type === "CLOCK_IN");
   const hasPunchedOut = initialRecords.some(r => r.type === "CLOCK_OUT");
 
@@ -63,7 +74,30 @@ export default function ClientDashboard({ initialRecords }: { initialRecords: an
 
   return (
     <div className="animate-fade-in">
-      <div className="grid-2 mb-6">
+      <div className="mb-6 p-4" style={{ backgroundColor: '#fff', borderRadius: '4px', border: '1px solid var(--border)' }}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 font-bold" style={{ color: currentStatus === "NONE" ? '#555' : '#0056b3' }}>
+            <CalendarCheck size={20} />
+            本日の勤務ステータス:
+          </div>
+          <select 
+            value={currentStatus} 
+            onChange={(e) => handleStatusChange(e.target.value)}
+            disabled={isPending}
+            className="input-field"
+            style={{ width: 'auto', padding: '0.4rem', fontWeight: 'bold' }}
+          >
+            <option value="NONE">通常出勤（未設定）</option>
+            <option value="STATUS_DAIKYU">代休</option>
+            <option value="STATUS_FURIKYU">振替休日</option>
+            <option value="STATUS_YUKYU">有給休暇</option>
+            <option value="STATUS_KEKKIN">欠勤</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="grid-2 mb-6" style={{ opacity: currentStatus !== "NONE" ? 0.5 : 1, pointerEvents: currentStatus !== "NONE" ? 'none' : 'auto' }}>
+
         <button 
           onClick={() => handleClock("CLOCK_IN")}
           disabled={hasPunchedIn || isPending}

@@ -153,3 +153,59 @@ export async function updateBreakTime(dateStr: string, minutes: number | null) {
     return { error: "Failed to update break time" };
   }
 }
+
+// ----------------------------------------------------------------------------------
+// 本日の勤務ステータス（代休・振休・有給・欠勤）を登録・解除する
+// ----------------------------------------------------------------------------------
+export async function setDailyStatus(dateStr: string, statusType: string | null) {
+  const session = await getServerSession(authOptions);
+  if (!session || !session.user) return { error: "Not authenticated" };
+
+  try {
+    const userId = (session.user as any).id;
+    
+    // JSTビジネスデーの境界を算出
+    const base = new Date(new Date(dateStr).getTime() + 9 * 60 * 60 * 1000);
+    if (base.getUTCHours() < 5) base.setUTCDate(base.getUTCDate() - 1);
+    const yyyy = base.getUTCFullYear();
+    const mm = base.getUTCMonth();
+    const dd = base.getUTCDate();
+    const startOfDay = new Date(Date.UTC(yyyy, mm, dd, 5 - 9, 0, 0, 0));
+    const endOfDay = new Date(Date.UTC(yyyy, mm, dd + 1, 4 - 9, 59, 59, 999));
+
+    // 既存のステータスレコード（STATUS_から始まるもの）を検索して削除
+    const existingStatuses = await prisma.attendanceRecord.findMany({
+      where: {
+        userId,
+        timestamp: { gte: startOfDay, lte: endOfDay },
+        type: { startsWith: "STATUS_" }
+      }
+    });
+
+    for (const record of existingStatuses) {
+      await prisma.attendanceRecord.delete({ where: { id: record.id } });
+    }
+
+    if (statusType) {
+      // 新しいステータス（代休など）を登録（タイムスタンプはその日の適当な時間：ここではstartOfDay + 1時間）
+      const recordTime = new Date(startOfDay.getTime() + 60 * 60 * 1000);
+      await prisma.attendanceRecord.create({
+        data: {
+          userId,
+          type: statusType, // 例："STATUS_DAIKYU"
+          timestamp: recordTime,
+        }
+      });
+    }
+
+    // スプレッドシートへ同期送信
+    await syncSpreadsheetDaily(userId, startOfDay.toISOString());
+
+    revalidatePath("/");
+    revalidatePath("/history");
+    return { success: true };
+  } catch (error) {
+    console.error(error);
+    return { error: "Failed to set daily status" };
+  }
+}

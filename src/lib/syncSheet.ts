@@ -31,23 +31,31 @@ export async function syncSpreadsheetDaily(userId: string, dateStr: string) {
   const stats = calculateDailyStats(user.attendances);
   const clockInRecord = user.attendances.find((a: any) => a.type === "CLOCK_IN");
   const clockOutRecord = user.attendances.find((a: any) => a.type === "CLOCK_OUT");
+  const statusRecord = user.attendances.find((a: any) => a.type.startsWith("STATUS_"));
 
   let status = "未出勤";
   if (clockInRecord && !clockOutRecord) status = "勤務中";
   if (clockInRecord && clockOutRecord) status = "退勤済";
+  
+  if (statusRecord) {
+    if (statusRecord.type === "STATUS_DAIKYU") status = "代休";
+    else if (statusRecord.type === "STATUS_FURIKYU") status = "振替休日";
+    else if (statusRecord.type === "STATUS_YUKYU") status = "有給休暇";
+    else if (statusRecord.type === "STATUS_KEKKIN") status = "欠勤";
+  }
 
   const formattedDate = `${yyyy}/${String(mm + 1).padStart(2, '0')}/${String(dd).padStart(2, '0')}`; // "2026/03/25"
 
   const payload = {
     date: formattedDate,
     name: user.name || "名称未設定",
-    clockIn: clockInRecord ? `${(new Date(clockInRecord.timestamp.getTime() + 9 * 60 * 60 * 1000).getUTCHours()).toString().padStart(2, '0')}:${(new Date(clockInRecord.timestamp.getTime() + 9 * 60 * 60 * 1000).getUTCMinutes()).toString().padStart(2, '0')}` : "",
-    clockOut: clockOutRecord ? `${(new Date(clockOutRecord.timestamp.getTime() + 9 * 60 * 60 * 1000).getUTCHours() < 5 ? new Date(clockOutRecord.timestamp.getTime() + 9 * 60 * 60 * 1000).getUTCHours() + 24 : new Date(clockOutRecord.timestamp.getTime() + 9 * 60 * 60 * 1000).getUTCHours()).toString().padStart(2, '0')}:${(new Date(clockOutRecord.timestamp.getTime() + 9 * 60 * 60 * 1000).getUTCMinutes()).toString().padStart(2, '0')}` : "",
-    breakMinutes: stats.elapsedMinutes > 0 ? formatTime(stats.breakMinutes) : "",
-    workingMinutes: stats.elapsedMinutes > 0 ? formatTime(stats.workingMinutes) : "",
-    regularMinutes: stats.elapsedMinutes > 0 ? formatTime(stats.regularMinutes) : "",
-    overtimeMinutes: stats.elapsedMinutes > 0 ? formatTime(stats.overtimeMinutes) : "",
-    nightMinutes: stats.elapsedMinutes > 0 ? formatTime(stats.nightMinutes) : "",
+    clockIn: clockInRecord && !statusRecord ? `${(new Date(clockInRecord.timestamp.getTime() + 9 * 60 * 60 * 1000).getUTCHours()).toString().padStart(2, '0')}:${(new Date(clockInRecord.timestamp.getTime() + 9 * 60 * 60 * 1000).getUTCMinutes()).toString().padStart(2, '0')}` : "",
+    clockOut: clockOutRecord && !statusRecord ? `${(new Date(clockOutRecord.timestamp.getTime() + 9 * 60 * 60 * 1000).getUTCHours() < 5 ? new Date(clockOutRecord.timestamp.getTime() + 9 * 60 * 60 * 1000).getUTCHours() + 24 : new Date(clockOutRecord.timestamp.getTime() + 9 * 60 * 60 * 1000).getUTCHours()).toString().padStart(2, '0')}:${(new Date(clockOutRecord.timestamp.getTime() + 9 * 60 * 60 * 1000).getUTCMinutes()).toString().padStart(2, '0')}` : "",
+    breakMinutes: stats.elapsedMinutes > 0 && !statusRecord ? formatTime(stats.breakMinutes) : "",
+    workingMinutes: stats.elapsedMinutes > 0 && !statusRecord ? formatTime(stats.workingMinutes) : "",
+    regularMinutes: stats.elapsedMinutes > 0 && !statusRecord ? formatTime(stats.regularMinutes) : "",
+    overtimeMinutes: stats.elapsedMinutes > 0 && !statusRecord ? formatTime(stats.overtimeMinutes) : "",
+    nightMinutes: stats.elapsedMinutes > 0 && !statusRecord ? formatTime(stats.nightMinutes) : "",
     status: status
   };
 
