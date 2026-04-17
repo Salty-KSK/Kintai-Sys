@@ -24,11 +24,12 @@ export default function ClientDashboard({ initialRecords }: { initialRecords: an
 
   const startEdit = (id: string, currentTimestamp: Date) => {
     const t = new Date(currentTimestamp);
-    const bizHour = t.getHours() < 5 ? t.getHours() + 24 : t.getHours();
+    const jstHour = (t.getUTCHours() + 9) % 24;
+    const bizHour = jstHour < 5 ? jstHour + 24 : jstHour;
     setEditingRecord({
       id,
       h: bizHour.toString().padStart(2, '0'),
-      m: t.getMinutes().toString().padStart(2, '0')
+      m: t.getUTCMinutes().toString().padStart(2, '0')
     });
   };
 
@@ -128,8 +129,10 @@ export default function ClientDashboard({ initialRecords }: { initialRecords: an
                       <span className="text-lg font-bold">
                         {(() => {
                            const d = new Date(r.timestamp);
-                           const h = d.getHours() < 5 ? d.getHours() + 24 : d.getHours();
-                           return `${h}:${d.getMinutes().toString().padStart(2, '0')}`;
+                           const jstHour = (d.getUTCHours() + 9) % 24;
+                           const jstMin = d.getUTCMinutes().toString().padStart(2, '0');
+                           const displayHour = jstHour < 5 ? jstHour + 24 : jstHour;
+                           return `${displayHour}:${jstMin}`;
                         })()}
                       </span>
                     ) : (

@@ -6,13 +6,15 @@ export async function syncSpreadsheetDaily(userId: string, dateStr: string) {
   if (!webhookUrl) return;
 
   const targetDate = new Date(dateStr);
-  const base = new Date(targetDate);
-  if (base.getHours() < 5) base.setDate(base.getDate() - 1);
-  const startOfDay = new Date(base);
-  startOfDay.setHours(5, 0, 0, 0);
-  const endOfDay = new Date(startOfDay);
-  endOfDay.setDate(endOfDay.getDate() + 1);
-  endOfDay.setHours(4, 59, 59, 999);
+  const base = new Date(targetDate.getTime() + 9 * 60 * 60 * 1000); // 仮想JST化
+  if (base.getUTCHours() < 5) base.setUTCDate(base.getUTCDate() - 1);
+  
+  const yyyy = base.getUTCFullYear();
+  const mm = base.getUTCMonth();
+  const dd = base.getUTCDate();
+
+  const startOfDay = new Date(Date.UTC(yyyy, mm, dd, 5 - 9, 0, 0, 0));
+  const endOfDay = new Date(Date.UTC(yyyy, mm, dd + 1, 4 - 9, 59, 59, 999));
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -34,16 +36,13 @@ export async function syncSpreadsheetDaily(userId: string, dateStr: string) {
   if (clockInRecord && !clockOutRecord) status = "勤務中";
   if (clockInRecord && clockOutRecord) status = "退勤済";
 
-  const y = startOfDay.getFullYear();
-  const m = String(startOfDay.getMonth() + 1).padStart(2, '0');
-  const d = String(startOfDay.getDate()).padStart(2, '0');
-  const formattedDate = `${y}/${m}/${d}`; // "2026/03/25"
+  const formattedDate = `${yyyy}/${String(mm + 1).padStart(2, '0')}/${String(dd).padStart(2, '0')}`; // "2026/03/25"
 
   const payload = {
     date: formattedDate,
     name: user.name || "名称未設定",
-    clockIn: clockInRecord ? new Date(clockInRecord.timestamp).toLocaleTimeString("ja-JP", {hour: '2-digit', minute: '2-digit'}) : "",
-    clockOut: clockOutRecord ? new Date(clockOutRecord.timestamp).toLocaleTimeString("ja-JP", {hour: '2-digit', minute: '2-digit'}) : "",
+    clockIn: clockInRecord ? `${(new Date(clockInRecord.timestamp.getTime() + 9 * 60 * 60 * 1000).getUTCHours()).toString().padStart(2, '0')}:${(new Date(clockInRecord.timestamp.getTime() + 9 * 60 * 60 * 1000).getUTCMinutes()).toString().padStart(2, '0')}` : "",
+    clockOut: clockOutRecord ? `${(new Date(clockOutRecord.timestamp.getTime() + 9 * 60 * 60 * 1000).getUTCHours() < 5 ? new Date(clockOutRecord.timestamp.getTime() + 9 * 60 * 60 * 1000).getUTCHours() + 24 : new Date(clockOutRecord.timestamp.getTime() + 9 * 60 * 60 * 1000).getUTCHours()).toString().padStart(2, '0')}:${(new Date(clockOutRecord.timestamp.getTime() + 9 * 60 * 60 * 1000).getUTCMinutes()).toString().padStart(2, '0')}` : "",
     breakMinutes: stats.elapsedMinutes > 0 ? formatTime(stats.breakMinutes) : "",
     workingMinutes: stats.elapsedMinutes > 0 ? formatTime(stats.workingMinutes) : "",
     regularMinutes: stats.elapsedMinutes > 0 ? formatTime(stats.regularMinutes) : "",

@@ -65,15 +65,21 @@ export async function updateRecordTime(id: string, newTimeStr: string) {
 
     // 時刻文字列 (HH:MM) とBusiness Dayを基準にタイムスタンプを更新する
     const [hours, minutes] = newTimeStr.split(":").map(Number);
-    const baseDate = new Date(record.timestamp);
-    if (baseDate.getHours() < 5) baseDate.setDate(baseDate.getDate() - 1);
+    // 元のタイムスタンプをJSTとして解釈
+    const baseDate = new Date(record.timestamp.getTime() + 9 * 60 * 60 * 1000);
+    if (baseDate.getUTCHours() < 5) baseDate.setUTCDate(baseDate.getUTCDate() - 1);
     
-    const newTimestamp = new Date(baseDate);
+    // yyyy-mm-dd を特定
+    const yyyy = baseDate.getUTCFullYear();
+    const mm = baseDate.getUTCMonth();
+    const dd = baseDate.getUTCDate();
+
+    // 入力された JST hour, JST minute から対象のUTCタイムスタンプを生成
+    let newTimestamp: Date;
     if (hours >= 24) {
-      newTimestamp.setDate(newTimestamp.getDate() + 1);
-      newTimestamp.setHours(hours - 24, minutes, 0, 0);
+      newTimestamp = new Date(Date.UTC(yyyy, mm, dd + 1, hours - 24 - 9, minutes, 0, 0));
     } else {
-      newTimestamp.setHours(hours, minutes, 0, 0);
+      newTimestamp = new Date(Date.UTC(yyyy, mm, dd, hours - 9, minutes, 0, 0));
     }
 
     await prisma.attendanceRecord.update({
@@ -97,14 +103,15 @@ export async function updateBreakTime(dateStr: string, minutes: number | null) {
   if (!session || !session.user) return { error: "Not authenticated" };
 
   try {
-    const base = new Date(dateStr);
-    if (base.getHours() < 5) base.setDate(base.getDate() - 1);
+    const base = new Date(new Date(dateStr).getTime() + 9 * 60 * 60 * 1000);
+    if (base.getUTCHours() < 5) base.setUTCDate(base.getUTCDate() - 1);
     
-    const startOfDay = new Date(base);
-    startOfDay.setHours(5, 0, 0, 0);
-    const endOfDay = new Date(startOfDay);
-    endOfDay.setDate(endOfDay.getDate() + 1);
-    endOfDay.setHours(4, 59, 59, 999);
+    const yyyy = base.getUTCFullYear();
+    const mm = base.getUTCMonth();
+    const dd = base.getUTCDate();
+
+    const startOfDay = new Date(Date.UTC(yyyy, mm, dd, 5 - 9, 0, 0, 0));
+    const endOfDay = new Date(Date.UTC(yyyy, mm, dd + 1, 4 - 9, 59, 59, 999));
 
     const existing = await prisma.attendanceRecord.findFirst({
       where: {
