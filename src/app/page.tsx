@@ -13,9 +13,17 @@ export default async function Dashboard() {
     redirect("/login");
   }
 
-  // Fetch today's records for this user based on session ID
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  // Fetch today's records for this user based on session ID (JST ビジネスデー 5:00〜翌4:59)
+  const now = new Date();
+  const base = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+  if (base.getUTCHours() < 5) base.setUTCDate(base.getUTCDate() - 1);
+  
+  const yyyy = base.getUTCFullYear();
+  const mm = base.getUTCMonth();
+  const dd = base.getUTCDate();
+  
+  const startOfDay = new Date(Date.UTC(yyyy, mm, dd, 5 - 9, 0, 0, 0));
+  const endOfDay = new Date(Date.UTC(yyyy, mm, dd + 1, 4 - 9, 59, 59, 999));
 
   const userId = (session.user as any).id;
 
@@ -25,7 +33,8 @@ export default async function Dashboard() {
       where: {
         userId: userId,
         timestamp: {
-          gte: today,
+          gte: startOfDay,
+          lte: endOfDay
         }
       },
       orderBy: {
