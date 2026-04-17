@@ -4,9 +4,37 @@ import { useState, useTransition } from "react";
 import { clock, deleteRecord, updateRecordTime, updateBreakTime, setDailyStatus } from "./actions";
 import { Clock, LogOut, Trash2, Pencil, Check, X, CalendarCheck } from "lucide-react";
 
-export default function ClientDashboard({ initialRecords }: { initialRecords: any[] }) {
+export default function ClientDashboard({ initialRecords, availableRestDays = [] }: { initialRecords: any[], availableRestDays?: string[] }) {
   const [isPending, startTransition] = useTransition();
   const [editingRecord, setEditingRecord] = useState<{ id: string, h: string, m: string } | null>(null);
+
+  // Status Management
+  const statusRecord = initialRecords.find(r => r.type && r.type.startsWith("STATUS_"));
+  const currentStatus = statusRecord ? statusRecord.type : "NONE";
+  const currentNote = statusRecord ? statusRecord.note : "";
+
+  const [stagedStatus, setStagedStatus] = useState<string | null>(null);
+  const [stagedNote, setStagedNote] = useState<string>("");
+
+  const isEditingStatus = stagedStatus !== null;
+
+  const handleStartStatusEdit = () => {
+    setStagedStatus(currentStatus);
+    setStagedNote(currentNote || (availableRestDays.length > 0 ? availableRestDays[0] : ""));
+  };
+
+  const handleSaveStatus = () => {
+    startTransition(async () => {
+      const typeStr = stagedStatus === "NONE" ? null : stagedStatus;
+      const requiresNote = typeStr === "STATUS_DAIKYU" || typeStr === "STATUS_FURIKYU";
+      await setDailyStatus(
+        new Date().toISOString(), 
+        typeStr, 
+        requiresNote ? stagedNote : null
+      );
+      setStagedStatus(null);
+    });
+  };
 
   const handleClock = (type: "CLOCK_IN" | "CLOCK_OUT") => {
     startTransition(async () => {
@@ -44,17 +72,6 @@ export default function ClientDashboard({ initialRecords }: { initialRecords: an
     });
   };
 
-  // Find existing special status
-  const statusRecord = initialRecords.find(r => r.type && r.type.startsWith("STATUS_"));
-  const currentStatus = statusRecord ? statusRecord.type : "NONE";
-
-  const handleStatusChange = (val: string) => {
-    startTransition(async () => {
-      const typeStr = val === "NONE" ? null : val;
-      await setDailyStatus(new Date().toISOString(), typeStr);
-    });
-  };
-
   const hasPunchedIn = initialRecords.some(r => r.type === "CLOCK_IN");
   const hasPunchedOut = initialRecords.some(r => r.type === "CLOCK_OUT");
 
@@ -72,28 +89,96 @@ export default function ClientDashboard({ initialRecords }: { initialRecords: an
     });
   };
 
+  const displayStatusLabel = (code: string) => {
+    switch (code) {
+      case "STATUS_DAIKYU": return "代休";
+      case "STATUS_FURIKYU": return "振替休日";
+      case "STATUS_YUKYU": return "有給休暇";
+      case "STATUS_KEKKIN": return "欠勤";
+      default: return "通常出勤（未設定）";
+    }
+  };
+
   return (
     <div className="animate-fade-in">
       <div className="mb-6 p-4" style={{ backgroundColor: '#fff', borderRadius: '4px', border: '1px solid var(--border)' }}>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 font-bold" style={{ color: currentStatus === "NONE" ? '#555' : '#0056b3' }}>
-            <CalendarCheck size={20} />
-            本日の勤務ステータス:
+        {!isEditingStatus ? (
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 font-bold" style={{ color: currentStatus === "NONE" ? '#555' : '#0056b3' }}>
+              <CalendarCheck size={20} />
+              本日のステータス: {displayStatusLabel(currentStatus)} 
+              {currentNote && <span style={{ fontSize: '0.85em', color: '#666', marginLeft: '0.5rem' }}>({currentNote}分)</span>}
+            </div>
+            <button 
+              onClick={handleStartStatusEdit}
+              disabled={isPending}
+              className="btn flex items-center justify-center"
+              style={{ backgroundColor: '#f0f0f0', color: '#333', padding: '0.3rem 0.8rem', fontSize: '0.9rem' }}
+            >
+              <Pencil size={14} className="mr-1" /> 変更
+            </button>
           </div>
-          <select 
-            value={currentStatus} 
-            onChange={(e) => handleStatusChange(e.target.value)}
-            disabled={isPending}
-            className="input-field"
-            style={{ width: 'auto', padding: '0.4rem', fontWeight: 'bold' }}
-          >
-            <option value="NONE">通常出勤（未設定）</option>
-            <option value="STATUS_DAIKYU">代休</option>
-            <option value="STATUS_FURIKYU">振替休日</option>
-            <option value="STATUS_YUKYU">有給休暇</option>
-            <option value="STATUS_KEKKIN">欠勤</option>
-          </select>
-        </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <span className="font-bold">ステータスを選択:</span>
+              <select 
+                value={stagedStatus || "NONE"} 
+                onChange={(e) => setStagedStatus(e.target.value)}
+                className="input-field"
+                style={{ width: 'auto', padding: '0.4rem' }}
+              >
+                <option value="NONE">通常出勤（未設定）</option>
+                <option value="STATUS_DAIKYU">代休</option>
+                <option value="STATUS_FURIKYU">振替休日</option>
+                <option value="STATUS_YUKYU">有給休暇</option>
+                <option value="STATUS_KEKKIN">欠勤</option>
+              </select>
+            </div>
+            
+            {(stagedStatus === "STATUS_DAIKYU" || stagedStatus === "STATUS_FURIKYU") && (
+              <div className="flex items-center justify-between mt-2 p-3 bg-gray-50 rounded border border-gray-200">
+                <span className="text-sm font-bold text-gray-700">消費する休日出勤日:</span>
+                {availableRestDays.length > 0 ? (
+                  <select 
+                    value={stagedNote} 
+                    onChange={(e) => setStagedNote(e.target.value)}
+                    className="input-field"
+                    style={{ width: 'auto', padding: '0.3rem', fontSize: '0.9rem' }}
+                  >
+                    <option value="" disabled>-- 選択してください --</option>
+                    {availableRestDays.map(d => (
+                      <option key={d} value={d}>{d}</option>
+                    ))}
+                    {currentNote && !availableRestDays.includes(currentNote) && (
+                      <option value={currentNote}>{currentNote} (登録済)</option>
+                    )}
+                  </select>
+                ) : (
+                  <span className="text-sm text-red-500 font-bold">未使用の休日出勤がありません</span>
+                )}
+              </div>
+            )}
+            
+            <div className="flex gap-2 justify-end mt-2">
+              <button 
+                onClick={() => setStagedStatus(null)} 
+                className="btn" 
+                style={{ backgroundColor: '#f0f0f0', color: '#555', padding: '0.4rem 1rem' }}
+              >
+                キャンセル
+              </button>
+              <button 
+                onClick={handleSaveStatus} 
+                disabled={isPending || ((stagedStatus === "STATUS_DAIKYU" || stagedStatus === "STATUS_FURIKYU") && !stagedNote)}
+                className="btn-primary flex items-center justify-center gap-1"
+                style={{ padding: '0.4rem 1rem' }}
+              >
+                {isPending ? "保存中..." : <><Check size={16} /> 保存</>}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="grid-2 mb-6" style={{ opacity: currentStatus !== "NONE" ? 0.5 : 1, pointerEvents: currentStatus !== "NONE" ? 'none' : 'auto' }}>

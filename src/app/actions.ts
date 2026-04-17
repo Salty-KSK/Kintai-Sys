@@ -157,7 +157,7 @@ export async function updateBreakTime(dateStr: string, minutes: number | null) {
 // ----------------------------------------------------------------------------------
 // 本日の勤務ステータス（代休・振休・有給・欠勤）を登録・解除する
 // ----------------------------------------------------------------------------------
-export async function setDailyStatus(dateStr: string, statusType: string | null) {
+export async function setDailyStatus(dateStr: string, statusType: string | null, consumedDateStr: string | null = null) {
   const session = await getServerSession(authOptions);
   if (!session || !session.user) return { error: "Not authenticated" };
 
@@ -194,6 +194,7 @@ export async function setDailyStatus(dateStr: string, statusType: string | null)
           userId,
           type: statusType, // 例："STATUS_DAIKYU"
           timestamp: recordTime,
+          note: consumedDateStr // 代休等の対象となった出勤日（例: "2026/04/15(日)"）
         }
       });
     }

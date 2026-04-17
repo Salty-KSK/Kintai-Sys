@@ -73,6 +73,7 @@ model AttendanceRecord {
   timestamp    DateTime @default(now())
   createdAt    DateTime @default(now())
   breakMinutes Int?     // 休憩時間を手動で記録するための分数
+  note         String?  // 代休・振休における元休日の日付などを記録する備考用カラム
   
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 

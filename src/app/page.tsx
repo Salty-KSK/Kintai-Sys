@@ -6,6 +6,20 @@ import ClientDashboard from "./client-dashboard";
 import Link from "next/link";
 import { History, LayoutDashboard, Clock } from "lucide-react";
 
+function getJstDateStringAndIsWeekend(dateObj: Date): { dateStr: string, isWeekend: boolean } {
+  const t = new Date(dateObj.getTime() + 9 * 60 * 60 * 1000);
+  if (t.getUTCHours() < 5) t.setUTCDate(t.getUTCDate() - 1);
+  const y = t.getUTCFullYear();
+  const m = t.getUTCMonth() + 1;
+  const d = t.getUTCDate();
+  const day = t.getUTCDay();
+  const days = ['日', '月', '火', '水', '木', '金', '土'];
+  return {
+    dateStr: `${y}/${String(m).padStart(2, '0')}/${String(d).padStart(2, '0')}(${days[day]})`,
+    isWeekend: day === 0 || day === 6
+  };
+}
+
 export default async function Dashboard() {
   const session = await getServerSession(authOptions);
   
@@ -28,6 +42,8 @@ export default async function Dashboard() {
   const userId = (session.user as any).id;
 
   let records: any[] = [];
+  let availableRestDays: string[] = [];
+
   if (userId) {
     records = await prisma.attendanceRecord.findMany({
       where: {
@@ -41,6 +57,41 @@ export default async function Dashboard() {
         timestamp: 'asc'
       }
     });
+
+    // 過去90日間のデータを取得して「代休チケット」の在庫を計算
+    const ninetyDaysAgo = new Date(startOfDay.getTime() - 90 * 24 * 60 * 60 * 1000);
+    const pastRecords = await prisma.attendanceRecord.findMany({
+      where: {
+        userId: userId,
+        timestamp: { gte: ninetyDaysAgo }
+      },
+      orderBy: { timestamp: 'asc' }
+    });
+
+    const workedHolidays = new Set<string>();
+    const consumedHolidays = new Set<string>();
+
+    // 1. まず休日出勤日と消費ステータスを分類
+    for (const r of pastRecords) {
+      if (r.type === "CLOCK_IN") {
+        const { dateStr, isWeekend } = getJstDateStringAndIsWeekend(r.timestamp);
+        if (isWeekend) {
+          workedHolidays.add(dateStr);
+        }
+      }
+      if (r.type === "STATUS_DAIKYU" || r.type === "STATUS_FURIKYU") {
+        if (r.note) {
+          consumedHolidays.add(r.note);
+        }
+      }
+    }
+
+    // 2. 稼いだ休日出勤日から、消費済みのものを引く
+    for (const dateStr of Array.from(workedHolidays)) {
+      if (!consumedHolidays.has(dateStr)) {
+        availableRestDays.push(dateStr);
+      }
+    }
   }
 
   return (
@@ -65,7 +116,7 @@ export default async function Dashboard() {
           </Link>
         </div>
 
-        <ClientDashboard initialRecords={records} />
+        <ClientDashboard initialRecords={records} availableRestDays={availableRestDays} />
       </div>
     </div>
   );

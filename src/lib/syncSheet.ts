@@ -42,6 +42,11 @@ export async function syncSpreadsheetDaily(userId: string, dateStr: string) {
     else if (statusRecord.type === "STATUS_FURIKYU") status = "振替休日";
     else if (statusRecord.type === "STATUS_YUKYU") status = "有給休暇";
     else if (statusRecord.type === "STATUS_KEKKIN") status = "欠勤";
+    
+    // 代休などの対象日（note）があれば合体させる
+    if (statusRecord.note) {
+      status = `${status} (${statusRecord.note}分)`;
+    }
   }
 
   const formattedDate = `${yyyy}/${String(mm + 1).padStart(2, '0')}/${String(dd).padStart(2, '0')}`; // "2026/03/25"
