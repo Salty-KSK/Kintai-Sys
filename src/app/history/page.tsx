@@ -96,27 +96,27 @@ export default async function HistoryPage() {
         </div>
 
         {/* コンパクトで洗練された累計サマリーバー */}
-        <div className="mb-6 flex flex-wrap md:flex-nowrap items-center justify-between gap-4 p-3 bg-white border rounded shadow-sm">
-          <div className="flex items-center gap-2 px-2 border-r pr-6 border-gray-100">
+        <div className="mb-6 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 p-4 bg-white border rounded shadow-sm">
+          <div className="flex flex-col md:flex-row items-center gap-2 px-2 md:border-r border-gray-100 md:pr-6 md:w-auto w-full pb-2 md:pb-0 border-b md:border-b-0">
             <span className="text-sm font-bold text-muted">勤務累計</span>
             <span className="text-xs text-muted">({periodStart.getMonth() + 1}/26〜{periodEnd.getMonth() + 1}/25)</span>
           </div>
-          <div className="flex flex-wrap items-center gap-6 px-2 w-full justify-around text-sm">
-            <div className="flex flex-col md:flex-row md:items-baseline gap-1">
-              <span className="text-xs text-muted">総実働</span>
-              <span className="font-black text-xl text-primary">{formatTime(totalWorking)}</span>
+          <div className="grid grid-cols-2 lg:flex lg:flex-row gap-3 w-full justify-around text-center">
+            <div className="flex flex-col items-center bg-blue-50/50 rounded p-2">
+              <span className="text-xs text-muted mb-1">総実働</span>
+              <span className="font-black text-2xl text-primary leading-none">{formatTime(totalWorking)}</span>
             </div>
-            <div className="flex flex-col md:flex-row md:items-baseline gap-1">
-              <span className="text-xs text-muted">所定</span>
-              <span className="font-bold text-lg">{formatTime(totalRegular)}</span>
+            <div className="flex flex-col items-center bg-gray-50 rounded p-2">
+              <span className="text-xs text-muted mb-1">所定</span>
+              <span className="font-bold text-xl leading-none">{formatTime(totalRegular)}</span>
             </div>
-            <div className="flex flex-col md:flex-row md:items-baseline gap-1">
-              <span className="text-xs text-muted">残業</span>
-              <span className="font-bold text-lg" style={{ color: totalOvertime > 0 ? 'var(--danger)' : 'inherit' }}>{formatTime(totalOvertime)}</span>
+            <div className="flex flex-col items-center bg-gray-50 rounded p-2">
+              <span className="text-xs text-muted mb-1">残業</span>
+              <span className="font-bold text-xl leading-none" style={{ color: totalOvertime > 0 ? 'var(--danger)' : 'inherit' }}>{formatTime(totalOvertime)}</span>
             </div>
-            <div className="flex flex-col md:flex-row md:items-baseline gap-1">
-              <span className="text-xs text-muted">深夜</span>
-              <span className="font-bold text-lg">{formatTime(totalNight)}</span>
+            <div className="flex flex-col items-center bg-gray-50 rounded p-2">
+              <span className="text-xs text-muted mb-1">深夜</span>
+              <span className="font-bold text-xl leading-none">{formatTime(totalNight)}</span>
             </div>
           </div>
         </div>
