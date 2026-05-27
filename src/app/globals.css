@@ -1,13 +1,31 @@
+/* ============================================
+   勤怠管理システム | パル設計
+   Google Workspace (Material 3) テーマ globals.css
+   ============================================ */
+
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
 
 :root {
-  --background: #F5F5F5;
-  --foreground: #000000;
-  --card-bg: #FFFFFF;
-  --text-muted: #666666;
-  --primary: #000000;
+  --google-bg: #F0F4F9;             /* Google Workspaceの標準薄グレー背景 */
+  --google-surface: #FFFFFF;        /* カード、パネル、入力欄の白色背景 */
+  --google-primary: #0B57D0;        /* Google Workspaceのシグネチャーブルー */
+  --google-active-pill: #D3E3FD;    /* 選択中のメニューカプセル背景 */
+  --google-hover-pill: #E1E9F6;     /* ホバー時のメニューカプセル背景 */
+  --google-text-main: #1F1F1F;      /* Gmailなどでも使用される標準の墨色 */
+  --google-text-sub: #5E5E5E;       /* サブ情報テキスト用のグレー */
+  --google-border: #C7C7C7;         /* Google標準の入力欄ボーダー */
+  --google-border-light: #E3E3E3;   /* テーブル境界線などの超極薄グレー */
+  --google-shadow: 0 1px 2px 0 rgba(60,64,67,0.3), 0 1px 3px 1px rgba(60,64,67,0.15);
+  --google-transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+  
+  /* 勤怠管理の下位互換プロパティ */
+  --background: var(--google-bg);
+  --foreground: var(--google-text-main);
+  --card-bg: var(--google-surface);
+  --text-muted: var(--google-text-sub);
+  --primary: var(--google-primary);
   --primary-foreground: #FFFFFF;
-  --border: #CCCCCC;
+  --border: var(--google-border-light);
   --danger: #D93025;
 }
 
@@ -19,10 +37,13 @@
 
 body {
   font-family: 'Noto Sans JP', sans-serif;
-  background-color: var(--background);
-  color: var(--foreground);
+  background-color: var(--google-bg);
+  color: var(--google-text-main);
+  font-size: 14px;
+  line-height: 1.6;
+  height: 100vh;       /* ウィンドウいっぱいに高さを固定 */
+  overflow: hidden;    /* ページ全体のスクロールバーを完全消去 */
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
 }
 
 a {
@@ -30,79 +51,225 @@ a {
   text-decoration: none;
 }
 
-/* Base Utility Classes */
-.container {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 2rem 1rem;
+/* ============================================
+   2カラムレイアウト構造 (Material 3 ダッシュボード)
+   ============================================ */
+.app-layout {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  background-color: var(--google-bg);
 }
 
+/* 左サイドバー (Navigation Drawer) */
+.app-sidebar {
+  width: 256px;
+  background-color: var(--google-bg);
+  display: flex;
+  flex-direction: column;
+  padding: 12px 16px;
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 100;
+  user-select: none;
+  border-right: 1px solid var(--google-border-light);
+}
+
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 12px;
+  margin-bottom: 12px;
+}
+
+.brand-icon {
+  font-size: 28px !important;
+  color: var(--google-primary);
+}
+
+.brand-text {
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--google-text-main);
+  letter-spacing: -0.2px;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* ナビゲーションメニュー項目 (カプセルホバーエフェクト) */
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  padding: 14px 24px;
+  border: none;
+  background: none;
+  border-radius: 100px; /* 完全なカプセル形状 */
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--google-text-sub);
+  cursor: pointer;
+  text-align: left;
+  transition: var(--google-transition);
+  outline: none;
+}
+
+.nav-icon {
+  font-size: 20px !important;
+}
+
+/* ホバーでペールグレー/ライトブルーカプセルへ */
+.nav-item:hover {
+  background-color: var(--google-hover-pill);
+  color: var(--google-text-main);
+}
+
+/* 選択中は綺麗なライトブルーで強調 */
+.nav-item.active {
+  background-color: var(--google-active-pill) !important;
+  color: var(--google-primary) !important;
+  font-weight: 600;
+}
+
+/* 右メインエリア */
+.app-container {
+  flex: 1;
+  margin-left: 256px;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  min-width: 0;
+  position: relative;
+}
+
+/* 薄型ミニマルヘッダー */
+.main-header {
+  background-color: var(--google-bg);
+  padding: 12px 24px;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  height: 56px;
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 100;
+  border-bottom: 1px solid var(--google-border-light);
+}
+
+.header-status {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* メインコンテンツエリア */
+.main-content {
+  padding: 76px 24px 24px 24px; /* 上パディングを76pxにして絶対配置ヘッダーとの重なりを完全防止 */
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+/* ============================================
+   マテリアルカード (Material 3 Container)
+   ============================================ */
 .card {
-  background-color: var(--card-bg);
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); /* very light shadow */
-  padding: 2rem;
-  margin-bottom: 1.5rem;
+  background-color: var(--google-surface);
+  border-radius: 24px; /* Material 3 コンテナ標準の大きな丸角 */
+  padding: 28px;
+  margin-bottom: 20px;
+  border: 1px solid var(--google-border-light);
+  box-shadow: 0 1px 2px rgba(60,64,67,0.05);
+  transition: box-shadow 0.2s var(--google-transition);
+}
+
+.card:hover {
+  box-shadow: 0 1px 3px rgba(60, 64, 67, 0.1);
 }
 
 .card-title {
   font-size: 1.25rem;
   font-weight: 700;
   margin-bottom: 1.5rem;
-  text-align: center;
+  color: var(--google-text-main);
 }
 
-.header-tabs {
-  display: flex;
-  gap: 1.5rem;
-  border-bottom: 1px solid var(--border);
-  margin-bottom: 2rem;
-  overflow-x: auto;
+/* ============================================
+   フォームコントロール
+   ============================================ */
+.form-group {
+  margin-bottom: 1.5rem;
 }
 
-.header-tab {
-  padding: 0.75rem 0.5rem;
-  font-weight: 500;
-  cursor: pointer;
-  color: var(--text-muted);
-  transition: all 0.2s ease;
-  white-space: nowrap;
+.form-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--google-text-main);
 }
 
-.header-tab.active {
-  color: var(--foreground);
-  border-bottom: 3px solid var(--primary);
+.input-field, .form-select {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid var(--google-border);
+  border-radius: 12px; /* 丸角12pxに */
+  outline: none;
+  font-family: inherit;
+  font-size: 1rem;
+  background-color: var(--google-surface);
+  color: var(--google-text-main);
+  transition: border-color 0.2s var(--google-transition), box-shadow 0.2s var(--google-transition);
 }
 
-.header-tab:hover:not(.active) {
-  color: #333;
+.input-field:focus, .form-select:focus {
+  border-color: var(--google-primary);
+  box-shadow: 0 0 0 2px rgba(11, 87, 208, 0.2); /* Googleブルーの柔らかいフォーカスリング */
 }
 
+/* ============================================
+   ボタンの洗練 (Material 3 Capsule Button)
+   ============================================ */
 .btn-primary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  background-color: var(--primary);
-  color: var(--primary-foreground);
+  background-color: var(--google-primary);
+  color: #FFFFFF;
   border: none;
-  padding: 0.75rem 1.5rem;
-  border-radius: 4px;
-  font-weight: 500;
+  padding: 12px 24px;
+  border-radius: 100px; /* カプセルボタン */
+  font-weight: 600;
   cursor: pointer;
-  font-size: 1rem;
-  transition: opacity 0.2s ease, transform 0.1s ease;
+  font-size: 14px;
+  transition: var(--google-transition);
   width: 100%;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
 }
 
 .btn-primary:disabled {
-  opacity: 0.5;
+  opacity: 0.38;
   cursor: not-allowed;
+  background-color: #1F1F1F !important;
+  color: #1F1F1F !important;
 }
 
 .btn-primary:not(:disabled):hover {
-  opacity: 0.9;
+  background-color: #0b57d0e0;
+  box-shadow: 0 1px 3px rgba(11, 87, 208, 0.3);
 }
 
 .btn-primary:not(:disabled):active {
@@ -114,56 +281,108 @@ a {
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  background-color: var(--card-bg);
-  color: var(--foreground);
-  border: 1px solid var(--border);
-  padding: 0.75rem 1.5rem;
-  border-radius: 4px;
-  font-weight: 500;
-  font-size: 1rem;
+  background-color: var(--google-surface);
+  color: var(--google-primary);
+  border: 1px solid var(--google-border);
+  padding: 12px 24px;
+  border-radius: 100px; /* カプセルボタン */
+  font-weight: 600;
+  font-size: 14px;
   cursor: pointer;
-  transition: background-color 0.2s ease;
+  transition: var(--google-transition);
   width: 100%;
 }
 
 .btn-secondary:hover {
-  background-color: #f9f9f9;
+  background-color: var(--google-hover-pill);
+  border-color: var(--google-primary);
 }
 
-.form-group {
-  margin-bottom: 1.5rem;
-}
-
-.form-label {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-weight: 500;
-  font-size: 0.875rem;
-}
-
-.input-field {
+/* ============================================
+   テーブルデザイン (Google Workspace スプレッドシート調)
+   ============================================ */
+.data-table {
   width: 100%;
-  padding: 0.75rem;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  outline: none;
-  font-family: inherit;
-  font-size: 1rem;
-  transition: border-color 0.2s ease;
+  border-collapse: collapse;
 }
 
-.input-field:focus {
-  border-color: var(--primary);
+.data-table th {
+  background-color: #E9EEF6; /* Googleスプレッドシート風の淡いブルーグレー */
+  color: #444746;
+  padding: 14px 20px;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 600;
+  border-top: 1px solid var(--google-border-light);
+  border-bottom: 1px solid var(--google-border-light);
+  white-space: nowrap;
 }
 
-.required-asterisk {
-  color: var(--danger);
-  margin-left: 0.25rem;
+.data-table td {
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--google-border-light);
+  font-size: 14px;
+  color: var(--google-text-main);
+  white-space: nowrap;
 }
 
-/* Typography styles */
+.data-table tbody tr:nth-child(even) td {
+  background-color: #FFFFFF;
+}
+
+.data-table tbody tr:nth-child(odd) td {
+  background-color: #F8F9FA; /* 極薄の縞模様 */
+}
+
+.data-table tbody tr:hover {
+  background-color: var(--google-hover-pill);
+}
+
+/* ============================================
+   勤怠固有クラスとユーティリティ
+   ============================================ */
+.container {
+  max-width: 1200px; /* 横幅を広げて見やすく */
+  margin: 0 auto;
+  padding: 0 0 24px 0;
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+@media (max-width: 768px) {
+  .grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.status-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 0.5rem;
+}
+.status-dot.active { background-color: #34A853; } /* Green */
+.status-dot.inactive { background-color: var(--border); }
+
+/* アラート・バッジ */
+.alert {
+  padding: 14px 18px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Typography & Layout Utilities */
 .text-center { text-align: center; }
-.text-muted { color: var(--text-muted); }
+.text-muted { color: var(--google-text-sub); }
 .text-sm { font-size: 0.875rem; }
 .text-lg { font-size: 1.125rem; font-weight: 700; }
 .text-xl { font-size: 1.5rem; font-weight: 700; }
@@ -177,35 +396,104 @@ a {
 .flex { display: flex; }
 .flex-col { display: flex; flex-direction: column; }
 .gap-2 { gap: 0.5rem; }
+.gap-3 { gap: 0.75rem; }
 .gap-4 { gap: 1rem; }
 .items-center { align-items: center; }
 .justify-between { justify-content: space-between; }
 .justify-center { justify-content: center; }
 
-/* Grid specific to attendance system */
-.grid-2 {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-}
+/* ============================================
+   スマートフォン表示への適応 (ボトムナビゲーション)
+   ============================================ */
+@media (max-width: 768px) {
+  body {
+    overflow-y: auto; /* スマホではある程度のスクロールを許容 */
+  }
 
-/* Status dots */
-.status-dot {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  margin-right: 0.5rem;
-}
-.status-dot.active { background-color: #34A853; } /* Green */
-.status-dot.inactive { background-color: var(--border); }
+  .app-layout {
+    flex-direction: column;
+    height: auto;
+    overflow: visible;
+  }
 
-/* Animation */
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
+  .app-sidebar {
+    width: 100%;
+    height: 64px;
+    flex-direction: row;
+    position: fixed;
+    bottom: 0;
+    top: auto;
+    left: 0;
+    right: 0;
+    border-top: 1px solid var(--google-border-light);
+    border-right: none;
+    background-color: var(--google-surface);
+    padding: 0;
+    justify-content: space-around;
+    box-shadow: 0 -2px 12px rgba(0,0,0,0.06);
+    z-index: 1000;
+  }
 
-.animate-fade-in {
-  animation: fadeIn 0.4s ease forwards;
+  .sidebar-brand {
+    display: none;
+  }
+
+  .sidebar-nav {
+    flex-direction: row;
+    width: 100%;
+    height: 100%;
+    justify-content: space-around;
+    align-items: center;
+    gap: 0;
+  }
+
+  .nav-item {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 6px 0;
+    width: auto;
+    height: 100%;
+    border-radius: 0;
+    font-size: 10px;
+    text-align: center;
+    flex: 1;
+  }
+
+  .nav-icon {
+    font-size: 20px !important;
+    padding: 4px 16px;
+    border-radius: 100px;
+    transition: var(--google-transition);
+  }
+
+  .nav-item.active {
+    background-color: transparent !important;
+    color: var(--google-primary) !important;
+  }
+
+  .nav-item.active .nav-icon {
+    background-color: var(--google-active-pill);
+  }
+
+  .app-container {
+    margin-left: 0;
+    margin-bottom: 0;
+    height: calc(100vh - 64px);
+  }
+
+  .main-header {
+    display: none; /* スマホではミニマルヘッダーを隠して表示領域を広く */
+  }
+
+  .main-content {
+    padding: 16px;
+    height: calc(100vh - 64px);
+  }
+
+  .card {
+    padding: 20px;
+    border-radius: 16px;
+  }
 }
