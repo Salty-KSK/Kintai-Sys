@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Clock, History, ShieldAlert } from "lucide-react";
+import { Clock, History, FileSpreadsheet, ShieldAlert } from "lucide-react";
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -21,6 +21,10 @@ export default function Sidebar() {
         <Link href="/history" className={`nav-item ${pathname === "/history" ? "active" : ""}`}>
           <History className="nav-icon" size={20} />
           <span className="nav-text">月間履歴・集計</span>
+        </Link>
+        <Link href="/summary" className={`nav-item ${pathname === "/summary" ? "active" : ""}`}>
+          <FileSpreadsheet className="nav-icon" size={20} />
+          <span className="nav-text">勤務集計</span>
         </Link>
         <Link href="/admin" className={`nav-item ${pathname === "/admin" ? "active" : ""}`}>
           <ShieldAlert className="nav-icon" size={20} />
