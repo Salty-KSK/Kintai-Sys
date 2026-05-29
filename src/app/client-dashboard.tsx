@@ -101,21 +101,20 @@ export default function ClientDashboard({ initialRecords, availableRestDays = []
 
   return (
     <div className="animate-fade-in">
-      <div className="mb-6 p-4" style={{ backgroundColor: '#fff', borderRadius: '4px', border: '1px solid var(--border)' }}>
+      <div className="status-card mb-6">
         {!isEditingStatus ? (
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 font-bold" style={{ color: currentStatus === "NONE" ? '#555' : '#0056b3' }}>
+            <div className={`flex items-center gap-2 status-label ${currentStatus !== "NONE" ? "active" : ""}`}>
               <CalendarCheck size={20} />
               本日のステータス: {displayStatusLabel(currentStatus)} 
-              {currentNote && <span style={{ fontSize: '0.85em', color: '#666', marginLeft: '0.5rem' }}>({currentNote}分)</span>}
+              {currentNote && <span className="status-sub">({currentNote}分)</span>}
             </div>
             <button 
               onClick={handleStartStatusEdit}
               disabled={isPending}
-              className="btn flex items-center justify-center"
-              style={{ backgroundColor: '#f0f0f0', color: '#333', padding: '0.3rem 0.8rem', fontSize: '0.9rem' }}
+              className="btn-tonal btn-tonal-sm flex items-center justify-center"
             >
-              <Pencil size={14} className="mr-1" /> 変更
+              <Pencil size={14} /> 変更
             </button>
           </div>
         ) : (
@@ -137,8 +136,8 @@ export default function ClientDashboard({ initialRecords, availableRestDays = []
             </div>
             
             {(stagedStatus === "STATUS_DAIKYU" || stagedStatus === "STATUS_FURIKYU") && (
-              <div className="flex items-center justify-between mt-2 p-3 bg-gray-50 rounded border border-gray-200">
-                <span className="text-sm font-bold text-gray-700">消費する休日出勤日:</span>
+              <div className="flex items-center justify-between mt-2 rest-day-picker">
+                <span className="text-sm" style={{ fontWeight: 600 }}>消費する休日出勤日:</span>
                 {availableRestDays.length > 0 ? (
                   <select 
                     value={stagedNote} 
@@ -155,7 +154,7 @@ export default function ClientDashboard({ initialRecords, availableRestDays = []
                     )}
                   </select>
                 ) : (
-                  <span className="text-sm text-red-500 font-bold">未使用の休日出勤がありません</span>
+                  <span className="text-sm text-danger" style={{ fontWeight: 600 }}>未使用の休日出勤がありません</span>
                 )}
               </div>
             )}
@@ -163,8 +162,7 @@ export default function ClientDashboard({ initialRecords, availableRestDays = []
             <div className="flex gap-2 justify-end mt-2">
               <button 
                 onClick={() => setStagedStatus(null)} 
-                className="btn" 
-                style={{ backgroundColor: '#f0f0f0', color: '#555', padding: '0.4rem 1rem' }}
+                className="btn-tonal"
               >
                 キャンセル
               </button>
@@ -172,7 +170,7 @@ export default function ClientDashboard({ initialRecords, availableRestDays = []
                 onClick={handleSaveStatus} 
                 disabled={isPending || ((stagedStatus === "STATUS_DAIKYU" || stagedStatus === "STATUS_FURIKYU") && !stagedNote)}
                 className="btn-primary flex items-center justify-center gap-1"
-                style={{ padding: '0.4rem 1rem' }}
+                style={{ width: 'auto' }}
               >
                 {isPending ? "保存中..." : <><Check size={16} /> 保存</>}
               </button>
@@ -186,26 +184,24 @@ export default function ClientDashboard({ initialRecords, availableRestDays = []
         <button 
           onClick={() => handleClock("CLOCK_IN")}
           disabled={hasPunchedIn || isPending}
-          className="btn-primary"
-          style={hasPunchedIn || isPending ? { height: '120px', flexDirection: 'column', fontSize: '1.25rem' } : { height: '120px', flexDirection: 'column', fontSize: '1.25rem', backgroundColor: '#eef6ff', color: '#0056b3', border: '4px solid #007bff' }}
+          className="clock-btn clock-btn-in"
         >
           <Clock size={32} />
-          <span className="font-bold">出勤</span>
+          <span>出勤</span>
         </button>
 
         <button 
           onClick={() => handleClock("CLOCK_OUT")}
           disabled={!hasPunchedIn || hasPunchedOut || isPending}
-          className={hasPunchedOut || !hasPunchedIn || isPending ? "btn-secondary" : "btn-primary"}
-          style={hasPunchedOut || !hasPunchedIn || isPending ? { height: '120px', flexDirection: 'column', fontSize: '1.25rem' } : { height: '120px', flexDirection: 'column', fontSize: '1.25rem', backgroundColor: '#ffeef0', color: '#b30010', border: '4px solid #dc3545' }}
+          className="clock-btn clock-btn-out"
         >
           <LogOut size={32} />
-          <span className="font-bold">退勤</span>
+          <span>退勤</span>
         </button>
       </div>
 
       <div className="mt-6 mb-6">
-        <div className="flex items-center justify-between p-4 mb-4" style={{ backgroundColor: '#e8f0fe', borderRadius: '4px', border: '1px solid #c2d7fa' }}>
+        <div className="flex items-center justify-between mb-4 break-section">
           <span className="font-bold">本日の休憩時間:</span>
           <select 
             value={currentBreakVal} 
@@ -229,14 +225,14 @@ export default function ClientDashboard({ initialRecords, availableRestDays = []
         <p className="text-sm text-muted mb-4 mt-2">打ち忘れや押し間違いがあった場合は、右側のアイコンから時刻の修正・取り消しが行えます。</p>
 
         {punchRecords.length === 0 ? (
-          <p className="text-gray-500 italic">まだ本日の打刻はありません。</p>
+          <p className="text-muted" style={{ fontStyle: 'italic' }}>まだ本日の打刻はありません。</p>
         ) : (
           <ul className="space-y-3" style={{ listStyle: 'none' }}>
             {punchRecords.map((r) => {
               const isEditing = editingRecord?.id === r.id;
               
               return (
-                <li key={r.id} className="flex items-center justify-between mb-2 p-4" style={{ backgroundColor: '#fafafa', borderRadius: '4px', border: '1px solid var(--border)' }}>
+                <li key={r.id} className="flex items-center justify-between mb-2 record-item">
                   <div className="flex items-center gap-4">
                     <div className="flex items-center">
                       <span className={`status-dot ${r.type === 'CLOCK_IN' ? 'active' : 'inactive'}`}></span>
@@ -291,8 +287,7 @@ export default function ClientDashboard({ initialRecords, availableRestDays = []
                       <button 
                         onClick={() => startEdit(r.id, r.timestamp)}
                         disabled={isPending}
-                        className="btn-secondary"
-                        style={{ padding: '0.4rem 0.6rem' }}
+                        className="btn-icon-outlined"
                         title="時刻を修正"
                       >
                         <Pencil size={18} />
@@ -300,8 +295,7 @@ export default function ClientDashboard({ initialRecords, availableRestDays = []
                       <button 
                         onClick={() => handleDelete(r.id)}
                         disabled={isPending}
-                        className="btn-secondary"
-                        style={{ padding: '0.4rem 0.6rem', color: 'var(--danger)', borderColor: 'var(--danger)' }}
+                        className="btn-icon-outlined danger"
                         title="打刻を取り消し"
                       >
                         <Trash2 size={18} />
@@ -312,8 +306,7 @@ export default function ClientDashboard({ initialRecords, availableRestDays = []
                       <button 
                         onClick={saveEdit}
                         disabled={isPending}
-                        className="btn-primary"
-                        style={{ padding: '0.4rem 0.6rem', backgroundColor: '#34A853' }}
+                        className="btn-icon-outlined success"
                         title="保存する"
                       >
                         <Check size={18} />
@@ -321,8 +314,7 @@ export default function ClientDashboard({ initialRecords, availableRestDays = []
                       <button 
                         onClick={cancelEdit}
                         disabled={isPending}
-                        className="btn-secondary"
-                        style={{ padding: '0.4rem 0.6rem' }}
+                        className="btn-icon-outlined"
                         title="キャンセル"
                       >
                         <X size={18} />

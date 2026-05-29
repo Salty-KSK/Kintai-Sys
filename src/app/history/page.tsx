@@ -118,7 +118,7 @@ export default async function HistoryPage() {
             const stats = calculateDailyStats(dailyRecords);
             
             return (
-              <div key={date} className="animate-slide-up" style={{ padding: '1rem', border: '1px solid #e0e0e0', borderRadius: '6px', backgroundColor: '#ffffff', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+              <div key={date} className="animate-slide-up summary-stat-card">
                 <div className="flex flex-col gap-2">
                   {/* 上段: 日付 */}
                   <div className="pb-2 border-b">
@@ -145,7 +145,7 @@ export default async function HistoryPage() {
                       
                       {stats.elapsedMinutes > 0 && (
                         <>
-                          <span className="text-primary font-bold px-2 py-1 rounded ml-2" style={{ backgroundColor: '#e8f0fe' }}>実働 {formatTime(stats.workingMinutes)}</span>
+                          <span className="text-primary font-bold px-2 py-1 rounded ml-2 summary-stat-card highlight">実働 {formatTime(stats.workingMinutes)}</span>
                           <span>所定 {formatTime(stats.regularMinutes)}</span>
                           <span style={{ color: stats.overtimeMinutes > 0 ? 'var(--danger)' : 'inherit' }}>残業 {formatTime(stats.overtimeMinutes)}</span>
                           <span>深夜残業 {formatTime(stats.nightMinutes)}</span>

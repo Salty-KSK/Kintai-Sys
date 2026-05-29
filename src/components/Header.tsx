@@ -10,20 +10,8 @@ export default function Header() {
     <header className="main-header">
       <div className="header-status">
         {session?.user && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{
-              width: '32px',
-              height: '32px',
-              borderRadius: '50%',
-              backgroundColor: 'var(--google-active-pill)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'var(--google-primary)',
-              fontWeight: 600,
-              fontSize: '14px',
-              overflow: 'hidden'
-            }}>
+          <div className="header-user-info">
+            <div className="user-avatar">
               {session.user.image ? (
                 <img 
                   src={session.user.image} 
@@ -34,22 +22,12 @@ export default function Header() {
                 <User size={16} />
               )}
             </div>
-            <span style={{ fontSize: '13px', color: 'var(--google-text-main)', fontWeight: 500 }}>
+            <span className="user-name">
               {session.user.name} さん
             </span>
             <button
               onClick={() => signOut({ callbackUrl: '/login' })}
-              className="btn-secondary"
-              style={{
-                width: 'auto',
-                padding: '6px 12px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                fontSize: '12px',
-                borderRadius: '100px',
-                marginLeft: '8px'
-              }}
+              className="btn-logout"
             >
               <LogOut size={14} />
               ログアウト

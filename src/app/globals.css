@@ -298,6 +298,336 @@ a {
   border-color: var(--google-primary);
 }
 
+.btn-secondary:not(:disabled):active {
+  transform: scale(0.98);
+}
+
+/* -- Tonal Button (Material 3 Filled Tonal) -- */
+.btn-tonal {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background-color: var(--google-hover-pill);
+  color: var(--google-primary);
+  border: none;
+  padding: 10px 20px;
+  border-radius: 100px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: var(--google-transition);
+}
+
+.btn-tonal:hover {
+  background-color: var(--google-active-pill);
+}
+
+.btn-tonal:active {
+  transform: scale(0.98);
+}
+
+.btn-tonal-sm {
+  padding: 6px 16px;
+  font-size: 13px;
+}
+
+/* -- Icon Button (Material 3 Standard Icon Button) -- */
+.btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 100px;
+  border: none;
+  background: transparent;
+  color: var(--google-text-sub);
+  cursor: pointer;
+  transition: var(--google-transition);
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.btn-icon:hover {
+  background-color: var(--google-hover-pill);
+  color: var(--google-text-main);
+}
+
+.btn-icon:active {
+  transform: scale(0.92);
+}
+
+/* Icon Button — Outlined variant */
+.btn-icon-outlined {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 100px;
+  border: 1px solid var(--google-border);
+  background: var(--google-surface);
+  color: var(--google-text-sub);
+  cursor: pointer;
+  transition: var(--google-transition);
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.btn-icon-outlined:hover {
+  background-color: var(--google-hover-pill);
+  color: var(--google-primary);
+  border-color: var(--google-primary);
+}
+
+.btn-icon-outlined.danger {
+  color: var(--danger);
+  border-color: rgba(217, 48, 37, 0.3);
+}
+
+.btn-icon-outlined.danger:hover {
+  background-color: #fce8e6;
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.btn-icon-outlined.success {
+  color: #34A853;
+  border-color: rgba(52, 168, 83, 0.3);
+  background-color: #e6f4ea;
+}
+
+.btn-icon-outlined.success:hover {
+  background-color: #ceead6;
+  border-color: #34A853;
+}
+
+.btn-icon-outlined:active,
+.btn-icon:active {
+  transform: scale(0.92);
+}
+
+/* -- Logout Button (Header) -- */
+.btn-logout {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: auto;
+  padding: 6px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 100px;
+  border: 1px solid var(--google-border);
+  background-color: var(--google-surface);
+  color: var(--google-primary);
+  cursor: pointer;
+  transition: var(--google-transition);
+  margin-left: 8px;
+}
+
+.btn-logout:hover {
+  background-color: var(--google-hover-pill);
+  border-color: var(--google-primary);
+}
+
+.btn-logout:active {
+  transform: scale(0.97);
+}
+
+/* ============================================
+   出勤・退勤ボタン (Material 3 Extended FAB風)
+   ============================================ */
+.clock-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  height: 120px;
+  flex-direction: column;
+  font-size: 1.25rem;
+  font-weight: 700;
+  border-radius: 24px;
+  cursor: pointer;
+  transition: var(--google-transition);
+  width: 100%;
+  border: none;
+  position: relative;
+  overflow: hidden;
+}
+
+.clock-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 24px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.clock-btn:not(:disabled):hover::after {
+  opacity: 1;
+}
+
+.clock-btn:not(:disabled):active {
+  transform: scale(0.98);
+}
+
+/* 出勤ボタン — Material 3 Primary Tonal */
+.clock-btn-in {
+  background-color: #D3E3FD;
+  color: var(--google-primary);
+  border: 2px solid transparent;
+}
+
+.clock-btn-in:not(:disabled):hover {
+  background-color: #c0d6f7;
+  box-shadow: 0 1px 3px rgba(11, 87, 208, 0.2);
+}
+
+/* 退勤ボタン — Material 3 Error Tonal */
+.clock-btn-out {
+  background-color: #FCE8E6;
+  color: #C5221F;
+  border: 2px solid transparent;
+}
+
+.clock-btn-out:not(:disabled):hover {
+  background-color: #f5cfcc;
+  box-shadow: 0 1px 3px rgba(197, 34, 31, 0.2);
+}
+
+/* 打刻済み disabled 状態 */
+.clock-btn:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+  background-color: #F0F4F9;
+  color: var(--google-text-sub);
+  border-color: transparent;
+}
+
+/* ============================================
+   ステータスカード / セクション
+   ============================================ */
+.status-card {
+  background-color: var(--google-surface);
+  border-radius: 16px;
+  border: 1px solid var(--google-border-light);
+  padding: 16px 20px;
+  transition: var(--google-transition);
+}
+
+.status-label {
+  font-weight: 700;
+  color: var(--google-text-sub);
+  font-size: 14px;
+}
+
+.status-label.active {
+  color: var(--google-primary);
+}
+
+.status-sub {
+  font-size: 0.85em;
+  color: var(--google-text-sub);
+  margin-left: 0.5rem;
+}
+
+/* 休憩時間セクション */
+.break-section {
+  background-color: #EEF3FC;
+  border-radius: 16px;
+  border: 1px solid #D3E3FD;
+  padding: 16px 20px;
+}
+
+/* 打刻履歴アイテム */
+.record-item {
+  background-color: #F8F9FA;
+  border-radius: 16px;
+  border: 1px solid var(--google-border-light);
+  padding: 16px 20px;
+  transition: var(--google-transition);
+}
+
+.record-item:hover {
+  background-color: var(--google-hover-pill);
+}
+
+/* 消費休日出勤日セクション */
+.rest-day-picker {
+  background-color: #F8F9FA;
+  border-radius: 12px;
+  border: 1px solid var(--google-border-light);
+  padding: 12px 16px;
+}
+
+/* ステータスカラー */
+.text-success { color: #34A853; }
+.text-danger { color: var(--danger); }
+
+/* ユーザーアバター・ヘッダー情報 */
+.header-user-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-avatar {
+  border-radius: 50%;
+  background-color: var(--google-active-pill);
+  color: var(--google-primary);
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.user-name {
+  font-size: 13px;
+  color: var(--google-text-main);
+  font-weight: 500;
+}
+
+/* 月間履歴サマリーカード */
+.summary-stat-card {
+  padding: 16px 20px;
+  border: 1px solid var(--google-border-light);
+  border-radius: 16px;
+  background-color: var(--google-surface);
+  text-align: center;
+}
+
+.summary-stat-card.highlight {
+  background-color: #EEF3FC;
+  border-color: #D3E3FD;
+}
+
+/* アニメーション */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-slide-up {
+  animation: slideUp 0.4s ease-out;
+}
+
 /* ============================================
    テーブルデザイン (Google Workspace スプレッドシート調)
    ============================================ */

@@ -72,7 +72,7 @@ export default async function AdminPage() {
                 <td style={{ color: stats.overtimeMinutes > 0 ? 'var(--danger)' : 'inherit', fontWeight: stats.overtimeMinutes > 0 ? 'bold' : 'normal' }}>
                   {stats.elapsedMinutes > 0 ? formatTime(stats.overtimeMinutes) : '-'}
                 </td>
-                <td style={{ color: status === '勤務中' ? '#34A853' : 'inherit', fontWeight: 'bold' }}>
+                <td className={`font-bold ${status === '勤務中' ? 'text-success' : ''}`}>
                   {status}
                 </td>
               </tr>
