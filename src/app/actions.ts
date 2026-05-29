@@ -210,3 +210,25 @@ export async function setDailyStatus(dateStr: string, statusType: string | null,
     return { error: "Failed to set daily status" };
   }
 }
+
+// ----------------------------------------------------------------------------------
+// 管理者によるユーザーロール変更
+// ----------------------------------------------------------------------------------
+export async function updateUserRole(userId: string, newRole: string) {
+  const session = await getServerSession(authOptions);
+  if (!session || !session.user) return { error: "Not authenticated" };
+
+  // 管理者権限チェック
+  if ((session.user as any).role !== "ADMIN") return { error: "Not authorized" };
+
+  try {
+    await prisma.user.update({
+      where: { id: userId },
+      data: { role: newRole }
+    });
+    revalidatePath("/admin");
+    return { success: true };
+  } catch (error) {
+    return { error: "Failed to update role" };
+  }
+}

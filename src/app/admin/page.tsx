@@ -2,9 +2,8 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import Link from "next/link";
-import { Users, LayoutDashboard, Clock } from "lucide-react";
 import { calculateDailyStats, formatTime } from "@/lib/attendanceCalc";
+import AdminClient from "./admin-client";
 
 export default async function AdminPage() {
   const session = await getServerSession(authOptions);
@@ -12,7 +11,22 @@ export default async function AdminPage() {
   if (!session || !session.user) {
     redirect("/login");
   }
-  
+
+  // 管理者権限チェック
+  if ((session.user as any).role !== "ADMIN") {
+    return (
+      <div className="container animate-fade-in">
+        <div className="card" style={{ textAlign: 'center', padding: '48px 28px' }}>
+          <h3 className="form-label text-lg mb-4">⚠️ 管理者権限が必要です</h3>
+          <p className="text-muted">
+            このページにアクセスするには管理者権限が必要です。<br />
+            管理者にお問い合わせください。
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   const now = new Date();
   const bizToday = new Date(now);
   if (bizToday.getHours() < 5) bizToday.setDate(bizToday.getDate() - 1);
@@ -23,7 +37,8 @@ export default async function AdminPage() {
   endOfDay.setDate(endOfDay.getDate() + 1);
   endOfDay.setHours(4, 59, 59, 999);
 
-  const users = await prisma.user.findMany({
+  // 本日の勤務データ（勤務状況タブ用）
+  const usersWithAttendance = await prisma.user.findMany({
     include: {
       attendances: {
         where: { timestamp: { gte: startOfDay, lte: endOfDay } },
@@ -32,60 +47,49 @@ export default async function AdminPage() {
     }
   });
 
+  const todayData = usersWithAttendance.map((user: any) => {
+    const clockIn = user.attendances.find((a: any) => a.type === 'CLOCK_IN');
+    const clockOut = user.attendances.find((a: any) => a.type === 'CLOCK_OUT');
+    let status = '未出勤';
+    if (clockIn && !clockOut) status = '勤務中';
+    if (clockIn && clockOut) status = '退勤済';
+
+    const stats = calculateDailyStats(user.attendances);
+
+    return {
+      id: user.id,
+      name: user.name || '未設定',
+      clockIn: clockIn ? new Date(clockIn.timestamp).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }) : null,
+      clockOut: clockOut ? new Date(clockOut.timestamp).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }) : null,
+      workingMinutes: stats.workingMinutes,
+      overtimeMinutes: stats.overtimeMinutes,
+      elapsedMinutes: stats.elapsedMinutes,
+      status,
+    };
+  });
+
+  // 全ユーザー一覧（ユーザー管理タブ用）
+  const allUsers = await prisma.user.findMany({
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+    },
+    orderBy: { name: 'asc' }
+  });
+
+  // roleをstring型に変換（シリアライズ対応）
+  const serializedUsers = allUsers.map((u: any) => ({
+    id: u.id,
+    name: u.name || '未設定',
+    email: u.email || '',
+    role: String(u.role || 'USER'),
+  }));
+
   return (
     <div className="container animate-fade-in">
-      <h3 className="form-label text-lg mb-4">本日の出退勤と勤務時間</h3>
-      
-      <table className="data-table" style={{ marginTop: '1rem' }}>
-        <thead>
-          <tr>
-            <th>社員名</th>
-            <th>出勤時刻</th>
-            <th>退勤時刻</th>
-            <th>実働</th>
-            <th>残業</th>
-            <th>ステータス</th>
-          </tr>
-        </thead>
-        <tbody>
-          {users.map((user: any) => {
-            const clockIn = user.attendances.find((a: any) => a.type === 'CLOCK_IN');
-            const clockOut = user.attendances.find((a: any) => a.type === 'CLOCK_OUT');
-            let status = '未出勤';
-            if (clockIn && !clockOut) status = '勤務中';
-            if (clockIn && clockOut) status = '退勤済';
-
-            const stats = calculateDailyStats(user.attendances);
-
-            return (
-              <tr key={user.id}>
-                <td style={{ fontWeight: 'bold' }}>{user.name || '未設定'}</td>
-                <td>
-                  {clockIn ? new Date(clockIn.timestamp).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }) : '-'}
-                </td>
-                <td>
-                  {clockOut ? new Date(clockOut.timestamp).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }) : '-'}
-                </td>
-                <td style={{ fontWeight: 'bold' }}>
-                  {stats.elapsedMinutes > 0 ? formatTime(stats.workingMinutes) : '-'}
-                </td>
-                <td style={{ color: stats.overtimeMinutes > 0 ? 'var(--danger)' : 'inherit', fontWeight: stats.overtimeMinutes > 0 ? 'bold' : 'normal' }}>
-                  {stats.elapsedMinutes > 0 ? formatTime(stats.overtimeMinutes) : '-'}
-                </td>
-                <td className={`font-bold ${status === '勤務中' ? 'text-success' : ''}`}>
-                  {status}
-                </td>
-              </tr>
-            );
-          })}
-          
-          {users.length === 0 && (
-            <tr>
-              <td colSpan={6} style={{ padding: '24px 0', textAlign: 'center', color: 'var(--google-text-sub)' }}>ユーザーデータがまだありません</td>
-            </tr>
-          )}
-        </tbody>
-      </table>
+      <AdminClient todayData={todayData} allUsers={serializedUsers} />
     </div>
   );
 }
