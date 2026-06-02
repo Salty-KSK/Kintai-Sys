@@ -11,7 +11,7 @@ export default function Sidebar() {
     <aside className="app-sidebar">
       <div className="sidebar-brand">
         <Clock size={28} className="brand-icon" style={{ color: "var(--google-primary)" }} />
-        <span className="brand-text">勤怠管理システム</span>
+        <span className="brand-text">請求管理</span>
       </div>
       <nav className="sidebar-nav">
         <Link href="/" className={`nav-item ${pathname === "/" ? "active" : ""}`}>
