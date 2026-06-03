@@ -179,28 +179,28 @@ export default function SummaryClient({
                 <tbody>
                   <tr><td colSpan={6} className="section-header">月別データ（時間集計）</td></tr>
                   <tr>
-                    <td style={{border:'none'}}></td><td style={{border:'none'}}></td>
+                    <td className="no-border-inner"></td><td className="no-border-inner"></td>
                     <td className="col-header">所定時間</td>
                     <td className="col-header">残業（8h超）</td>
                     <td className="col-header">深夜所定</td>
                     <td className="col-header">深夜残業</td>
                   </tr>
                   <tr>
-                    <td style={{border:'none'}}></td><td style={{fontWeight:700}}>平日</td>
+                    <td className="no-border-inner"></td><td style={{fontWeight:700}}>平日</td>
                     <td className="num-cell">{fmtTotal(ms.weekdayRegular)}</td>
                     <td className="num-cell overtime">{fmtTotal(ms.weekdayOvertime)}</td>
                     <td className="num-cell">{fmtTotal(ms.weekdayNightRegular)}</td>
                     <td className="num-cell">{fmtTotal(ms.weekdayNightOvertime)}</td>
                   </tr>
                   <tr>
-                    <td style={{fontWeight:700, borderLeft:'none', borderBottom:'none'}}>休日</td>
+                    <td style={{fontWeight:700}} rowSpan={2}>休日</td>
                     <td>法定外</td>
                     <td className="num-cell">{fmtTotal(ms.satHoliday)}</td>
                     <td className="num-cell">{fmtTotal(ms.satHolidayOvertime)}</td>
                     <td className="num-cell" colSpan={2}>{fmtTotal(ms.satNight)}</td>
                   </tr>
                   <tr>
-                    <td style={{borderLeft:'none'}}></td><td>法定</td>
+                    <td>法定</td>
                     <td className="num-cell">{fmtTotal(ms.sunHoliday)}</td>
                     <td className="num-cell">{fmtTotal(ms.sunHolidayOvertime)}</td>
                     <td className="num-cell" colSpan={2}>{fmtTotal(ms.sunNight)}</td>

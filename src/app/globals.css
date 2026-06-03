@@ -878,11 +878,19 @@ a {
   font-weight: 600;
   font-size: 12px;
   color: #5F6368;
+  text-align: center;
 }
 
 .report-table .value-cell {
   font-weight: 700;
   font-size: 13px;
+  text-align: center;
+}
+
+.report-table .no-border-inner {
+  border-top: none;
+  border-bottom: none;
+  border-right: none;
 }
 
 .report-table .col-header {
