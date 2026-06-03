@@ -13,6 +13,7 @@ type Props = {
   year: number;
   month: number;
   isAdmin: boolean;
+  periodStr: string;
 };
 
 function fmt(min: number): string {
@@ -30,7 +31,7 @@ function fmtTotal(min: number): string {
 }
 
 export default function SummaryClient({
-  dailySummaries, monthlySummary, selectedUser, allUsers, year, month, isAdmin
+  dailySummaries, monthlySummary, selectedUser, allUsers, year, month, isAdmin, periodStr
 }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -70,12 +71,12 @@ export default function SummaryClient({
         <h1 style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>勤務集計表</h1>
         <div style={{ fontSize: 13, color: "#5F6368", display: "flex", gap: 24 }}>
           <span>{selectedUser.name}{selectedUser.department ? ` （${selectedUser.department}）` : ""}</span>
-          <span>{year}年{month}月</span>
+          <span>{periodStr}</span>
           {selectedUser.employeeId && <span>社員番号: {selectedUser.employeeId}</span>}
         </div>
       </div>
 
-      {/* ヘッダー: 従業員選択 + 月切り替え */}
+      {/* ヘッダー: 従業員選択 + 月切り替え（no-print） */}
       <div className="card no-print" style={{ marginBottom: 16, padding: "16px 20px" }}>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 16, alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
@@ -119,97 +120,159 @@ export default function SummaryClient({
         </div>
       </div>
 
-      {/* 月別サマリー */}
-      <div className="card" style={{ marginBottom: 16, padding: "16px 20px" }}>
-        <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 12, color: "var(--google-primary)" }}>月別データ（時間集計）</h3>
-        <table className="data-table" style={{ fontSize: 13 }}>
-          <thead>
-            <tr>
-              <th></th><th></th><th>所定時間</th><th>残業（8h超）</th><th>深夜所定</th><th>深夜残業</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td rowSpan={1} style={{ fontWeight: 700 }}>平日</td>
-              <td></td>
-              <td style={{ fontWeight: 700 }}>{fmtTotal(ms.weekdayRegular)}</td>
-              <td style={{ color: ms.weekdayOvertime > 0 ? "var(--danger)" : "inherit", fontWeight: ms.weekdayOvertime > 0 ? 700 : 400 }}>{fmtTotal(ms.weekdayOvertime)}</td>
-              <td>{fmtTotal(ms.weekdayNightRegular)}</td>
-              <td>{fmtTotal(ms.weekdayNightOvertime)}</td>
-            </tr>
-            <tr>
-              <td style={{ fontWeight: 700 }}>休日</td>
-              <td>法定外</td>
-              <td>{fmtTotal(ms.satHoliday)}</td>
-              <td>{fmtTotal(ms.satHolidayOvertime)}</td>
-              <td colSpan={2}>{fmtTotal(ms.satNight)}</td>
-            </tr>
-            <tr>
-              <td></td>
-              <td>法定</td>
-              <td>{fmtTotal(ms.sunHoliday)}</td>
-              <td>{fmtTotal(ms.sunHolidayOvertime)}</td>
-              <td colSpan={2}>{fmtTotal(ms.sunNight)}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      {/* 日数集計 */}
-      <div className="card" style={{ marginBottom: 16, padding: "16px 20px" }}>
-        <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 12, color: "var(--google-primary)" }}>月別データ（日数集計）</h3>
-        <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-          {[
-            { label: "出勤日数", value: ms.workDays, color: "var(--google-primary)" },
-            { label: "休日出勤", value: ms.holidayWorkDays, color: "#E37400" },
-            { label: "有給", value: ms.yukyuDays, color: "#34A853" },
-            { label: "代休", value: ms.daikyuDays, color: "#4285F4" },
-            { label: "振替休日", value: ms.furikyuDays, color: "#9334E6" },
-            { label: "欠勤", value: ms.kekkinDays, color: "var(--danger)" },
-          ].map(item => (
-            <div key={item.label} style={{ textAlign: "center", minWidth: 70, padding: "8px 12px", background: "var(--google-bg)", borderRadius: 12 }}>
-              <div style={{ fontSize: 22, fontWeight: 700, color: item.color }}>{item.value}</div>
-              <div style={{ fontSize: 11, color: "var(--google-text-sub)" }}>{item.label}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* 日別テーブル */}
-      <div className="card" style={{ padding: "16px 20px", overflow: "auto" }}>
-        <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 12, color: "var(--google-primary)" }}>日別データ（勤怠集計）</h3>
+      {/* 帳票本体 */}
+      <div className="card" style={{ padding: "20px", overflow: "auto" }}>
         <div style={{ overflowX: "auto" }}>
-          <table className="data-table" style={{ fontSize: 12, whiteSpace: "nowrap" }}>
-            <thead>
-              <tr>
-                <th>日付</th><th>曜日</th>
-                <th>出勤</th><th>退勤</th><th>休憩</th>
-                <th>所定</th><th>残業</th>
-                <th>深夜所定</th><th>深夜残業</th>
-                <th>法定外(土)</th><th>法定外深夜</th>
-                <th>法定(日)</th><th>法定深夜</th>
-                <th>備考</th>
-              </tr>
-            </thead>
+
+          {/* セクション1: 従業員情報 */}
+          <table className="report-table">
             <tbody>
+              <tr><td colSpan={15} className="section-header">従業員情報</td></tr>
+              <tr>
+                <td className="label-cell">従業員名</td>
+                <td className="label-cell">社員番号</td>
+                <td className="label-cell" colSpan={2}>配属先 / 役職</td>
+                <td colSpan={11}></td>
+              </tr>
+              <tr>
+                <td className="value-cell">{selectedUser.name}</td>
+                <td className="value-cell">{selectedUser.employeeId || '—'}</td>
+                <td className="value-cell" colSpan={2}>{selectedUser.department || '—'}</td>
+                <td colSpan={11}></td>
+              </tr>
+            </tbody>
+          </table>
+
+          {/* セクション2: 勤怠情報 */}
+          <table className="report-table">
+            <tbody>
+              <tr><td colSpan={15} className="section-header">勤怠情報</td></tr>
+              <tr>
+                <td className="label-cell">年月</td>
+                <td className="label-cell" colSpan={3}>期間</td>
+                <td colSpan={11}></td>
+              </tr>
+              <tr>
+                <td className="value-cell">{year}年{month}月</td>
+                <td className="value-cell" colSpan={3}>{periodStr}</td>
+                <td colSpan={11}></td>
+              </tr>
+            </tbody>
+          </table>
+
+          {/* セクション3: 月別データ（時間集計） */}
+          <table className="report-table">
+            <tbody>
+              <tr><td colSpan={15} className="section-header">月別データ（時間集計）</td></tr>
+              <tr>
+                <td></td><td></td>
+                <td className="col-header">所定時間</td>
+                <td className="col-header">残業（8h超）</td>
+                <td className="col-header">深夜所定</td>
+                <td className="col-header">深夜残業</td>
+                <td colSpan={9}></td>
+              </tr>
+              <tr>
+                <td></td><td style={{fontWeight:700}}>平日</td>
+                <td className="num-cell">{fmtTotal(ms.weekdayRegular)}</td>
+                <td className="num-cell overtime">{fmtTotal(ms.weekdayOvertime)}</td>
+                <td className="num-cell">{fmtTotal(ms.weekdayNightRegular)}</td>
+                <td className="num-cell">{fmtTotal(ms.weekdayNightOvertime)}</td>
+                <td colSpan={9}></td>
+              </tr>
+              <tr>
+                <td style={{fontWeight:700}}>休日</td>
+                <td>法定外</td>
+                <td className="num-cell">{fmtTotal(ms.satHoliday)}</td>
+                <td className="num-cell">{fmtTotal(ms.satHolidayOvertime)}</td>
+                <td className="num-cell" colSpan={2}>{fmtTotal(ms.satNight)}</td>
+                <td colSpan={9}></td>
+              </tr>
+              <tr>
+                <td></td><td>法定</td>
+                <td className="num-cell">{fmtTotal(ms.sunHoliday)}</td>
+                <td className="num-cell">{fmtTotal(ms.sunHolidayOvertime)}</td>
+                <td className="num-cell" colSpan={2}>{fmtTotal(ms.sunNight)}</td>
+                <td colSpan={9}></td>
+              </tr>
+            </tbody>
+          </table>
+
+          {/* セクション4: 月別データ（日数集計） */}
+          <table className="report-table">
+            <tbody>
+              <tr><td colSpan={15} className="section-header">月別データ（日数集計）</td></tr>
+              <tr>
+                <td className="col-header">出勤日数</td>
+                <td className="col-header">休日出勤</td>
+                <td className="col-header">有給</td>
+                <td className="col-header">代休</td>
+                <td className="col-header">振休</td>
+                <td className="col-header">欠勤</td>
+                <td colSpan={9}></td>
+              </tr>
+              <tr>
+                <td className="num-cell">{ms.workDays}</td>
+                <td className="num-cell">{ms.holidayWorkDays}</td>
+                <td className="num-cell">{ms.yukyuDays}</td>
+                <td className="num-cell">{ms.daikyuDays}</td>
+                <td className="num-cell">{ms.furikyuDays}</td>
+                <td className="num-cell">{ms.kekkinDays}</td>
+                <td colSpan={9}></td>
+              </tr>
+            </tbody>
+          </table>
+
+          {/* セクション5: 日別データ（勤怠集計） */}
+          <table className="report-table">
+            <tbody>
+              <tr><td colSpan={15} className="section-header">日別データ（勤怠集計）</td></tr>
+              <tr className="col-header-row">
+                <td className="col-header">日付</td>
+                <td className="col-header">曜日/祝</td>
+                <td className="col-header">出勤</td>
+                <td className="col-header">退勤</td>
+                <td className="col-header">休憩</td>
+                <td className="col-header">所定</td>
+                <td className="col-header">残業（8h超）</td>
+                <td className="col-header">深夜所定</td>
+                <td className="col-header">深夜残業</td>
+                <td className="col-header">法定外休日(土曜)</td>
+                <td className="col-header">法定外休日深夜</td>
+                <td className="col-header">法定休日(日曜)</td>
+                <td className="col-header">法定休日深夜</td>
+                <td className="col-header">深夜労働合計</td>
+                <td className="col-header">備考</td>
+              </tr>
               {dailySummaries.map((d, i) => {
                 const isSat = d.dayOfWeek === "土";
                 const isSun = d.dayOfWeek === "日";
+                const isHoliday = d.isHoliday;
                 const isLeave = !!d.leaveType;
-                const rowBg = isSun ? "#FEF0F0" : isSat ? "#F0F4FE" : d.isHoliday ? "#FEF0F0" : undefined;
+
+                const rowClass = isSun ? "day-row-sun"
+                  : isHoliday ? "day-row-holiday"
+                  : isSat ? "day-row-sat"
+                  : "";
+
+                const dowClass = (isSun || isHoliday) ? "dow-sun"
+                  : isSat ? "dow-sat"
+                  : "";
+
+                const hasOvertime = d.overtimeMinutes > 0;
 
                 return (
-                  <tr key={i} style={{ background: rowBg }}>
+                  <tr key={i} className={rowClass}>
                     <td>{d.date.slice(5)}</td>
-                    <td style={{
-                      fontWeight: 700,
-                      color: isSun || d.isHoliday ? "var(--danger)" : isSat ? "var(--google-primary)" : "inherit"
-                    }}>{d.dayOfWeek}</td>
+                    <td className={dowClass}>{d.dayOfWeek}</td>
                     <td>{d.clockIn}</td>
                     <td>{d.clockOut}</td>
                     <td>{fmt(d.breakMinutes)}</td>
                     <td style={{ fontWeight: 700 }}>{fmt(d.regularMinutes)}</td>
-                    <td style={{ color: d.overtimeMinutes > 0 ? "var(--danger)" : "inherit", fontWeight: d.overtimeMinutes > 0 ? 700 : 400 }}>
+                    <td style={{
+                      color: hasOvertime ? "var(--danger)" : "inherit",
+                      fontWeight: hasOvertime ? 700 : 400
+                    }}>
                       {fmt(d.overtimeMinutes)}
                     </td>
                     <td>{fmt(d.nightRegularMin)}</td>
@@ -218,16 +281,20 @@ export default function SummaryClient({
                     <td>{fmt(d.holidaySatNightMin)}</td>
                     <td>{fmt(d.holidaySunMin)}</td>
                     <td>{fmt(d.holidaySunNightMin)}</td>
+                    <td>{fmt(d.totalNightMin)}</td>
                     <td style={{
                       color: isLeave ? "var(--google-primary)" : "var(--google-text-sub)",
                       fontWeight: isLeave ? 700 : 400,
                       fontSize: 11
-                    }}>{d.status !== "退勤済" ? d.status : ""}</td>
+                    }}>
+                      {isLeave ? d.status : (d.status === "退勤済" ? "退勤済" : "")}
+                    </td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
+
         </div>
       </div>
     </div>

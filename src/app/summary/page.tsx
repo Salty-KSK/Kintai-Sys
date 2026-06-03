@@ -99,6 +99,9 @@ export default async function SummaryPage({
     select: { name: true, employeeId: true, department: true }
   });
 
+  // 期間文字列
+  const periodStr = `${dates[0].getFullYear()}/${(dates[0].getMonth()+1).toString().padStart(2,'0')}/${dates[0].getDate().toString().padStart(2,'0')} 〜 ${dates[dates.length-1].getFullYear()}/${(dates[dates.length-1].getMonth()+1).toString().padStart(2,'0')}/${dates[dates.length-1].getDate().toString().padStart(2,'0')}`;
+
   // シリアライズ
   const serializedData = {
     dailySummaries,
@@ -112,7 +115,8 @@ export default async function SummaryPage({
     allUsers: allUsers.map(u => ({ id: u.id, name: u.name || "未設定" })),
     year,
     month,
-    isAdmin: canViewOthers
+    isAdmin: canViewOthers,
+    periodStr
   };
 
   return <SummaryClient {...serializedData} />;

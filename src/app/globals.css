@@ -849,6 +849,80 @@ a {
   display: none;
 }
 
+/* 帳票テーブル（スプレッドシート風） */
+.report-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  table-layout: auto;
+}
+
+.report-table td {
+  padding: 6px 10px;
+  border: 1px solid var(--google-border-light);
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.report-table .section-header {
+  background-color: #E9EEF6;
+  font-weight: 700;
+  font-size: 13px;
+  color: #444746;
+  padding: 8px 12px;
+}
+
+.report-table .label-cell {
+  background-color: #F8F9FA;
+  font-weight: 600;
+  font-size: 12px;
+  color: #5F6368;
+}
+
+.report-table .value-cell {
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.report-table .col-header {
+  background-color: #F0F4F9;
+  font-weight: 600;
+  font-size: 11px;
+  color: #444746;
+  text-align: center;
+}
+
+.report-table .num-cell {
+  text-align: center;
+  font-family: 'Inter', 'Noto Sans JP', sans-serif;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.report-table .num-cell.overtime {
+  color: var(--danger);
+}
+
+.report-table .day-row-sat {
+  background-color: #F0F4FE;
+}
+
+.report-table .day-row-sun,
+.report-table .day-row-holiday {
+  background-color: #FEF0F0;
+}
+
+.report-table .dow-sun,
+.report-table .dow-holiday {
+  color: var(--danger);
+  font-weight: 700;
+}
+
+.report-table .dow-sat {
+  color: var(--google-primary);
+  font-weight: 700;
+}
+
 /* 印刷で非表示にするクラス */
 /* (no-print は @media print 内でのみ作用) */
 
