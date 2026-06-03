@@ -76,33 +76,35 @@ export default function SummaryClient({
         </div>
       </div>
 
-      {/* ヘッダー: 従業員選択 + 月切り替え（no-print） */}
+      {/* 従業員選択（管理者のみ） */}
+      {isAdmin && (
+        <div className="card no-print" style={{ marginBottom: 12, padding: "12px 20px" }}>
+          <select
+            className="form-select"
+            value={selectedUser.id}
+            onChange={(e) => navigate(e.target.value)}
+            style={{ minWidth: 200, padding: "8px 12px", borderRadius: 8, border: "1px solid var(--google-border)", fontSize: 14 }}
+          >
+            {allUsers.map(u => (
+              <option key={u.id} value={u.id}>{u.name}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {/* ヘッダー: 従業員情報 + 月切り替え（no-print） */}
       <div className="card no-print" style={{ marginBottom: 16, padding: "16px 20px" }}>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 16, alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-            {isAdmin && (
-              <select
-                className="form-select"
-                value={selectedUser.id}
-                onChange={(e) => navigate(e.target.value)}
-                style={{ minWidth: 160, padding: "8px 12px", borderRadius: 8, border: "1px solid var(--google-border)", fontSize: 14 }}
-              >
-                {allUsers.map(u => (
-                  <option key={u.id} value={u.id}>{u.name}</option>
-                ))}
-              </select>
-            )}
-            <div style={{ fontSize: 15, fontWeight: 700, display: "flex", alignItems: "center", gap: 0 }}>
-              <span>{selectedUser.name}</span>
-              <span style={{ color: "var(--google-border)", margin: "0 10px", fontWeight: 300 }}>｜</span>
-              <span style={{ fontSize: 13, fontWeight: 500, color: "var(--google-text-sub)" }}>
-                {selectedUser.employeeId || '—'}
-              </span>
-              <span style={{ color: "var(--google-border)", margin: "0 10px", fontWeight: 300 }}>｜</span>
-              <span style={{ fontSize: 13, fontWeight: 500, color: "var(--google-text-sub)" }}>
-                {selectedUser.department || '—'}
-              </span>
-            </div>
+          <div style={{ fontSize: 15, fontWeight: 700, display: "flex", alignItems: "center", gap: 0 }}>
+            <span>{selectedUser.name}</span>
+            <span style={{ color: "var(--google-border)", margin: "0 10px", fontWeight: 300 }}>｜</span>
+            <span style={{ fontSize: 13, fontWeight: 500, color: "var(--google-text-sub)" }}>
+              {selectedUser.employeeId || '—'}
+            </span>
+            <span style={{ color: "var(--google-border)", margin: "0 10px", fontWeight: 300 }}>｜</span>
+            <span style={{ fontSize: 13, fontWeight: 500, color: "var(--google-text-sub)" }}>
+              {selectedUser.department || '—'}
+            </span>
           </div>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             <button className="btn-tonal" onClick={prevMonth} style={{ padding: "6px 14px", borderRadius: 20, minWidth: 0 }}>◀</button>
@@ -177,28 +179,28 @@ export default function SummaryClient({
                 <tbody>
                   <tr><td colSpan={6} className="section-header">月別データ（時間集計）</td></tr>
                   <tr>
-                    <td></td><td></td>
+                    <td style={{border:'none'}}></td><td style={{border:'none'}}></td>
                     <td className="col-header">所定時間</td>
                     <td className="col-header">残業（8h超）</td>
                     <td className="col-header">深夜所定</td>
                     <td className="col-header">深夜残業</td>
                   </tr>
                   <tr>
-                    <td></td><td style={{fontWeight:700}}>平日</td>
+                    <td style={{border:'none'}}></td><td style={{fontWeight:700}}>平日</td>
                     <td className="num-cell">{fmtTotal(ms.weekdayRegular)}</td>
                     <td className="num-cell overtime">{fmtTotal(ms.weekdayOvertime)}</td>
                     <td className="num-cell">{fmtTotal(ms.weekdayNightRegular)}</td>
                     <td className="num-cell">{fmtTotal(ms.weekdayNightOvertime)}</td>
                   </tr>
                   <tr>
-                    <td style={{fontWeight:700}}>休日</td>
+                    <td style={{fontWeight:700, borderLeft:'none', borderBottom:'none'}}>休日</td>
                     <td>法定外</td>
                     <td className="num-cell">{fmtTotal(ms.satHoliday)}</td>
                     <td className="num-cell">{fmtTotal(ms.satHolidayOvertime)}</td>
                     <td className="num-cell" colSpan={2}>{fmtTotal(ms.satNight)}</td>
                   </tr>
                   <tr>
-                    <td></td><td>法定</td>
+                    <td style={{borderLeft:'none'}}></td><td>法定</td>
                     <td className="num-cell">{fmtTotal(ms.sunHoliday)}</td>
                     <td className="num-cell">{fmtTotal(ms.sunHolidayOvertime)}</td>
                     <td className="num-cell" colSpan={2}>{fmtTotal(ms.sunNight)}</td>
