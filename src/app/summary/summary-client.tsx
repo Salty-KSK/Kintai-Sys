@@ -1,9 +1,12 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import type { DailySummary, MonthlySummary } from "@/lib/summaryCalc";
 import { FileDown } from "lucide-react";
+import { updateRecordTime, deleteRecord, updateBreakTime, setDailyStatus } from "@/app/actions";
+
+type RecordItem = { id: string; type: string; timestamp: string; breakMinutes: number | null; note: string | null };
 
 type Props = {
   dailySummaries: DailySummary[];
@@ -14,6 +17,10 @@ type Props = {
   month: number;
   isAdmin: boolean;
   periodStr: string;
+  records: Record<string, RecordItem[]>;
+  canEdit: boolean;
+  viewingUserId: string;
+  sessionUserId: string;
 };
 
 function fmt(min: number): string {
@@ -31,10 +38,18 @@ function fmtTotal(min: number): string {
 }
 
 export default function SummaryClient({
-  dailySummaries, monthlySummary, selectedUser, allUsers, year, month, isAdmin, periodStr
+  dailySummaries, monthlySummary, selectedUser, allUsers, year, month, isAdmin, periodStr,
+  records, canEdit, viewingUserId, sessionUserId
 }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [editingCell, setEditingCell] = useState<{ date: string; field: 'clockIn' | 'clockOut' | 'break' | 'status' } | null>(null);
+  const [editH, setEditH] = useState('');
+  const [editM, setEditM] = useState('');
+  const [editBreak, setEditBreak] = useState<string>('auto');
+  const [editStatus, setEditStatus] = useState<string>('');
+  const [editNote, setEditNote] = useState('');
+  const [isPending, startTransition] = useTransition();
 
   const navigate = (userId?: string, y?: number, m?: number) => {
     setLoading(true);
@@ -58,6 +73,91 @@ export default function SummaryClient({
 
   const handlePrint = () => {
     window.print();
+  };
+
+  // --- 編集ヘルパー ---
+  const parseTimeToHM = (timeStr: string | undefined): { h: number; m: number } => {
+    if (!timeStr) return { h: 9, m: 0 };
+    const parts = timeStr.split(':');
+    return { h: parseInt(parts[0]) || 9, m: parseInt(parts[1]) || 0 };
+  };
+
+  const startClockEdit = (d: DailySummary, field: 'clockIn' | 'clockOut') => {
+    if (!canEdit) return;
+    const timeStr = field === 'clockIn' ? d.clockIn : d.clockOut;
+    const { h, m } = parseTimeToHM(timeStr);
+    setEditH(String(h));
+    setEditM(String(m));
+    setEditingCell({ date: d.date, field });
+  };
+
+  const startBreakEdit = (d: DailySummary) => {
+    if (!canEdit) return;
+    // 休憩レコード探索
+    const dayRecords = records[d.date] || [];
+    const breakRecord = dayRecords.find(r => r.type === 'BREAK_TIME');
+    if (breakRecord && breakRecord.breakMinutes !== null) {
+      setEditBreak(String(breakRecord.breakMinutes));
+    } else {
+      setEditBreak('auto');
+    }
+    setEditingCell({ date: d.date, field: 'break' });
+  };
+
+  const startStatusEdit = (d: DailySummary) => {
+    if (!canEdit) return;
+    const dayRecords = records[d.date] || [];
+    const statusRecord = dayRecords.find(r => r.type.startsWith('STATUS_'));
+    if (statusRecord) {
+      setEditStatus(statusRecord.type);
+      setEditNote(statusRecord.note || '');
+    } else {
+      setEditStatus('');
+      setEditNote('');
+    }
+    setEditingCell({ date: d.date, field: 'status' });
+  };
+
+  const saveClockEdit = () => {
+    if (!editingCell) return;
+    const { date, field } = editingCell;
+    const dayRecords = records[date] || [];
+    const targetType = field === 'clockIn' ? 'CLOCK_IN' : 'CLOCK_OUT';
+    const record = dayRecords.find(r => r.type === targetType);
+    if (!record) {
+      setEditingCell(null);
+      return;
+    }
+    const hh = editH.padStart(2, '0');
+    const mm = editM.padStart(2, '0');
+    startTransition(async () => {
+      await updateRecordTime(record.id, `${hh}:${mm}`);
+      setEditingCell(null);
+      router.refresh();
+    });
+  };
+
+  const saveBreakEdit = () => {
+    if (!editingCell) return;
+    const { date } = editingCell;
+    const minutes = editBreak === 'auto' ? null : parseInt(editBreak);
+    startTransition(async () => {
+      await updateBreakTime(date, minutes, viewingUserId);
+      setEditingCell(null);
+      router.refresh();
+    });
+  };
+
+  const saveStatusEdit = () => {
+    if (!editingCell) return;
+    const { date } = editingCell;
+    const statusType = editStatus || null;
+    const note = editNote || null;
+    startTransition(async () => {
+      await setDailyStatus(date, statusType, note, viewingUserId);
+      setEditingCell(null);
+      router.refresh();
+    });
   };
 
   const ms = monthlySummary;
@@ -253,13 +353,91 @@ export default function SummaryClient({
 
                 const hasOvertime = d.overtimeMinutes > 0;
 
+                const isEditingClockIn = editingCell?.date === d.date && editingCell.field === 'clockIn';
+                const isEditingClockOut = editingCell?.date === d.date && editingCell.field === 'clockOut';
+                const isEditingBreak = editingCell?.date === d.date && editingCell.field === 'break';
+                const isEditingStatus = editingCell?.date === d.date && editingCell.field === 'status';
+
                 return (
                   <tr key={i} className={rowClass}>
                     <td>{d.date.slice(5)}</td>
                     <td className={dowClass}>{d.dayOfWeek}</td>
-                    <td>{d.clockIn}</td>
-                    <td>{d.clockOut}</td>
-                    <td>{fmt(d.breakMinutes)}</td>
+
+                    {/* 出勤セル */}
+                    <td
+                      onClick={() => !isEditingClockIn && startClockEdit(d, 'clockIn')}
+                      style={{ cursor: canEdit && !isEditingClockIn ? 'pointer' : 'default', position: 'relative' }}
+                    >
+                      {isEditingClockIn ? (
+                        <div className="no-print" style={{display:'flex', gap:2, alignItems:'center'}}>
+                          <select value={editH} onChange={e => setEditH(e.target.value)} style={{width:50, fontSize:11, padding:'2px'}}>
+                            {Array.from({length:24}, (_, i) => i + 5).map(h => (
+                              <option key={h} value={h}>{h >= 24 ? `翌${h-24}` : h}</option>
+                            ))}
+                          </select>:
+                          <select value={editM} onChange={e => setEditM(e.target.value)} style={{width:45, fontSize:11, padding:'2px'}}>
+                            {Array.from({length:60}, (_, i) => i).map(m => (
+                              <option key={m} value={m}>{m.toString().padStart(2,'0')}</option>
+                            ))}
+                          </select>
+                          <button onClick={saveClockEdit} disabled={isPending} style={{fontSize:10, cursor:'pointer', background:'none', border:'none', color:'#34A853'}}>✔</button>
+                          <button onClick={() => setEditingCell(null)} style={{fontSize:10, cursor:'pointer', background:'none', border:'none', color:'var(--danger)'}}>✖</button>
+                        </div>
+                      ) : (
+                        d.clockIn
+                      )}
+                    </td>
+
+                    {/* 退勤セル */}
+                    <td
+                      onClick={() => !isEditingClockOut && startClockEdit(d, 'clockOut')}
+                      style={{ cursor: canEdit && !isEditingClockOut ? 'pointer' : 'default', position: 'relative' }}
+                    >
+                      {isEditingClockOut ? (
+                        <div className="no-print" style={{display:'flex', gap:2, alignItems:'center'}}>
+                          <select value={editH} onChange={e => setEditH(e.target.value)} style={{width:50, fontSize:11, padding:'2px'}}>
+                            {Array.from({length:24}, (_, i) => i + 5).map(h => (
+                              <option key={h} value={h}>{h >= 24 ? `翌${h-24}` : h}</option>
+                            ))}
+                          </select>:
+                          <select value={editM} onChange={e => setEditM(e.target.value)} style={{width:45, fontSize:11, padding:'2px'}}>
+                            {Array.from({length:60}, (_, i) => i).map(m => (
+                              <option key={m} value={m}>{m.toString().padStart(2,'0')}</option>
+                            ))}
+                          </select>
+                          <button onClick={saveClockEdit} disabled={isPending} style={{fontSize:10, cursor:'pointer', background:'none', border:'none', color:'#34A853'}}>✔</button>
+                          <button onClick={() => setEditingCell(null)} style={{fontSize:10, cursor:'pointer', background:'none', border:'none', color:'var(--danger)'}}>✖</button>
+                        </div>
+                      ) : (
+                        d.clockOut
+                      )}
+                    </td>
+
+                    {/* 休憩セル */}
+                    <td
+                      onClick={() => !isEditingBreak && startBreakEdit(d)}
+                      style={{ cursor: canEdit && !isEditingBreak ? 'pointer' : 'default', position: 'relative' }}
+                    >
+                      {isEditingBreak ? (
+                        <div className="no-print" style={{display:'flex', gap:2, alignItems:'center'}}>
+                          <select value={editBreak} onChange={e => setEditBreak(e.target.value)} style={{width:55, fontSize:11, padding:'2px'}}>
+                            <option value="auto">自動</option>
+                            <option value="0">0分</option>
+                            <option value="15">15分</option>
+                            <option value="30">30分</option>
+                            <option value="45">45分</option>
+                            <option value="60">60分</option>
+                            <option value="75">75分</option>
+                            <option value="90">90分</option>
+                          </select>
+                          <button onClick={saveBreakEdit} disabled={isPending} style={{fontSize:10, cursor:'pointer', background:'none', border:'none', color:'#34A853'}}>✔</button>
+                          <button onClick={() => setEditingCell(null)} style={{fontSize:10, cursor:'pointer', background:'none', border:'none', color:'var(--danger)'}}>✖</button>
+                        </div>
+                      ) : (
+                        fmt(d.breakMinutes)
+                      )}
+                    </td>
+
                     <td style={{ fontWeight: 700 }}>{fmt(d.regularMinutes)}</td>
                     <td style={{
                       color: hasOvertime ? "var(--danger)" : "inherit",
@@ -274,12 +452,44 @@ export default function SummaryClient({
                     <td>{fmt(d.holidaySunMin)}</td>
                     <td>{fmt(d.holidaySunNightMin)}</td>
                     <td>{fmt(d.totalNightMin)}</td>
-                    <td style={{
-                      color: isLeave ? "var(--google-primary)" : "var(--google-text-sub)",
-                      fontWeight: isLeave ? 700 : 400,
-                      fontSize: 11
-                    }}>
-                      {isLeave ? d.status : (d.status === "退勤済" ? "退勤済" : "")}
+
+                    {/* 備考（ステータス）セル */}
+                    <td
+                      onClick={() => !isEditingStatus && startStatusEdit(d)}
+                      style={{
+                        cursor: canEdit && !isEditingStatus ? 'pointer' : 'default',
+                        color: isLeave ? "var(--google-primary)" : "var(--google-text-sub)",
+                        fontWeight: isLeave ? 700 : 400,
+                        fontSize: 11,
+                        position: 'relative'
+                      }}
+                    >
+                      {isEditingStatus ? (
+                        <div className="no-print" style={{display:'flex', flexDirection:'column', gap:2, minWidth:100}}>
+                          <select value={editStatus} onChange={e => { setEditStatus(e.target.value); if (!['STATUS_DAIKYU','STATUS_FURIKYU'].includes(e.target.value)) setEditNote(''); }} style={{fontSize:11, padding:'2px'}}>
+                            <option value="">通常</option>
+                            <option value="STATUS_DAIKYU">代休</option>
+                            <option value="STATUS_FURIKYU">振休</option>
+                            <option value="STATUS_YUKYU">有給</option>
+                            <option value="STATUS_KEKKIN">欠勤</option>
+                          </select>
+                          {(editStatus === 'STATUS_DAIKYU' || editStatus === 'STATUS_FURIKYU') && (
+                            <input
+                              type="text"
+                              placeholder="対象日"
+                              value={editNote}
+                              onChange={e => setEditNote(e.target.value)}
+                              style={{fontSize:11, padding:'2px 4px', width:'100%', border:'1px solid var(--google-border)', borderRadius:4}}
+                            />
+                          )}
+                          <div style={{display:'flex', gap:2}}>
+                            <button onClick={saveStatusEdit} disabled={isPending} style={{fontSize:10, cursor:'pointer', background:'none', border:'none', color:'#34A853'}}>✔</button>
+                            <button onClick={() => setEditingCell(null)} style={{fontSize:10, cursor:'pointer', background:'none', border:'none', color:'var(--danger)'}}>✖</button>
+                          </div>
+                        </div>
+                      ) : (
+                        isLeave ? d.status : (d.status === "退勤済" ? "退勤済" : "")
+                      )}
                     </td>
                   </tr>
                 );

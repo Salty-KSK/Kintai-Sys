@@ -48,7 +48,7 @@ export async function deleteRecord(id: string) {
     await syncSpreadsheetDaily((session.user as any).id, record.timestamp.toISOString());
     
     revalidatePath("/");
-    revalidatePath("/history");
+    revalidatePath("/summary");
     return { success: true };
   } catch (error) {
     return { error: "Failed to delete record" };
@@ -91,18 +91,21 @@ export async function updateRecordTime(id: string, newTimeStr: string) {
     await syncSpreadsheetDaily((session.user as any).id, newTimestamp.toISOString());
 
     revalidatePath("/");
-    revalidatePath("/history");
+    revalidatePath("/summary");
     return { success: true };
   } catch (error) {
     return { error: "Failed to update record" };
   }
 }
 
-export async function updateBreakTime(dateStr: string, minutes: number | null) {
+export async function updateBreakTime(dateStr: string, minutes: number | null, targetUserId?: string) {
   const session = await getServerSession(authOptions);
   if (!session || !session.user) return { error: "Not authenticated" };
 
   try {
+    const sessionUserId = (session.user as any).id;
+    const userId = targetUserId || sessionUserId;
+
     const base = new Date(new Date(dateStr).getTime() + 9 * 60 * 60 * 1000);
     if (base.getUTCHours() < 5) base.setUTCDate(base.getUTCDate() - 1);
     
@@ -115,7 +118,7 @@ export async function updateBreakTime(dateStr: string, minutes: number | null) {
 
     const existing = await prisma.attendanceRecord.findFirst({
       where: {
-        userId: (session.user as any).id,
+        userId,
         type: "BREAK_TIME",
         timestamp: { gte: startOfDay, lte: endOfDay }
       }
@@ -134,7 +137,7 @@ export async function updateBreakTime(dateStr: string, minutes: number | null) {
         timestamp.setHours(12, 0, 0, 0); 
         await prisma.attendanceRecord.create({
           data: {
-            userId: (session.user as any).id,
+            userId,
             type: "BREAK_TIME",
             timestamp: timestamp,
             breakMinutes: minutes
@@ -144,10 +147,10 @@ export async function updateBreakTime(dateStr: string, minutes: number | null) {
     }
 
     // スプレッドシートへ同期送信
-    await syncSpreadsheetDaily((session.user as any).id, startOfDay.toISOString());
+    await syncSpreadsheetDaily(userId, startOfDay.toISOString());
 
     revalidatePath("/");
-    revalidatePath("/history");
+    revalidatePath("/summary");
     return { success: true };
   } catch (error) {
     return { error: "Failed to update break time" };
@@ -157,12 +160,12 @@ export async function updateBreakTime(dateStr: string, minutes: number | null) {
 // ----------------------------------------------------------------------------------
 // 本日の勤務ステータス（代休・振休・有給・欠勤）を登録・解除する
 // ----------------------------------------------------------------------------------
-export async function setDailyStatus(dateStr: string, statusType: string | null, consumedDateStr: string | null = null) {
+export async function setDailyStatus(dateStr: string, statusType: string | null, consumedDateStr: string | null = null, targetUserId?: string) {
   const session = await getServerSession(authOptions);
   if (!session || !session.user) return { error: "Not authenticated" };
 
   try {
-    const userId = (session.user as any).id;
+    const userId = targetUserId || (session.user as any).id;
     
     // JSTビジネスデーの境界を算出
     const base = new Date(new Date(dateStr).getTime() + 9 * 60 * 60 * 1000);
@@ -203,7 +206,7 @@ export async function setDailyStatus(dateStr: string, statusType: string | null,
     await syncSpreadsheetDaily(userId, startOfDay.toISOString());
 
     revalidatePath("/");
-    revalidatePath("/history");
+    revalidatePath("/summary");
     return { success: true };
   } catch (error) {
     console.error(error);

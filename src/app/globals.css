@@ -849,6 +849,76 @@ a {
   display: none;
 }
 
+/* 残業ヒートマップ */
+.heatmap-table {
+  border-collapse: collapse;
+  font-size: 11px;
+  table-layout: fixed;
+}
+
+.heatmap-table th,
+.heatmap-table td {
+  padding: 3px 2px;
+  text-align: center;
+  border: 1px solid var(--google-border-light);
+  min-width: 28px;
+  font-variant-numeric: tabular-nums;
+  font-family: 'Inter', 'Noto Sans JP', sans-serif;
+}
+
+.heatmap-table th {
+  font-weight: 600;
+  font-size: 10px;
+  color: #5F6368;
+  background: #F8F9FA;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.heatmap-table td.employee-name {
+  text-align: left;
+  font-weight: 600;
+  padding: 4px 8px;
+  white-space: nowrap;
+  position: sticky;
+  left: 0;
+  background: white;
+  z-index: 1;
+  min-width: 80px;
+}
+
+.heatmap-table td.total-cell {
+  font-weight: 700;
+  min-width: 60px;
+}
+
+.heatmap-table td.overtime-warning {
+  color: var(--danger);
+  font-weight: 700;
+}
+
+.heatmap-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 12px;
+  font-size: 11px;
+}
+
+.heatmap-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.heatmap-legend-color {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  border: 1px solid #ddd;
+}
+
 /* 帳票テーブル（スプレッドシート風） */
 .report-table {
   width: auto;

@@ -116,7 +116,25 @@ export default async function SummaryPage({
     year,
     month,
     isAdmin: canViewOthers,
-    periodStr
+    periodStr,
+    records: Object.fromEntries(
+      dates.map(d => {
+        const dateStr = `${d.getFullYear()}/${(d.getMonth()+1).toString().padStart(2,'0')}/${d.getDate().toString().padStart(2,'0')}`;
+        const startOfDay = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate(), 5 - 9, 0, 0, 0));
+        const endOfDay = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate() + 1, 4 - 9, 59, 59, 999));
+        const dayRecords = records.filter(r => r.timestamp >= startOfDay && r.timestamp <= endOfDay);
+        return [dateStr, dayRecords.map(r => ({
+          id: r.id,
+          type: r.type,
+          timestamp: r.timestamp.toISOString(),
+          breakMinutes: (r as any).breakMinutes ?? null,
+          note: (r as any).note ?? null
+        }))];
+      })
+    ),
+    canEdit: session.user.id === selectedUserId || canViewOthers,
+    viewingUserId: selectedUserId,
+    sessionUserId: (session.user as any).id,
   };
 
   return <SummaryClient {...serializedData} />;
