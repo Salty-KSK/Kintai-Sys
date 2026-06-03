@@ -92,13 +92,16 @@ export default function SummaryClient({
                 ))}
               </select>
             )}
-            <div style={{ fontSize: 16, fontWeight: 700 }}>
-              {selectedUser.name}
-              {selectedUser.department && (
-                <span style={{ fontSize: 12, color: "var(--google-text-sub)", marginLeft: 8 }}>
-                  {selectedUser.department}
-                </span>
-              )}
+            <div style={{ fontSize: 15, fontWeight: 700, display: "flex", alignItems: "center", gap: 0 }}>
+              <span>{selectedUser.name}</span>
+              <span style={{ color: "var(--google-border)", margin: "0 10px", fontWeight: 300 }}>｜</span>
+              <span style={{ fontSize: 13, fontWeight: 500, color: "var(--google-text-sub)" }}>
+                {selectedUser.employeeId || '—'}
+              </span>
+              <span style={{ color: "var(--google-border)", margin: "0 10px", fontWeight: 300 }}>｜</span>
+              <span style={{ fontSize: 13, fontWeight: 500, color: "var(--google-text-sub)" }}>
+                {selectedUser.department || '—'}
+              </span>
             </div>
           </div>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -124,104 +127,87 @@ export default function SummaryClient({
       <div className="card" style={{ padding: "20px", overflow: "auto" }}>
         <div style={{ overflowX: "auto" }}>
 
-          {/* セクション1: 従業員情報 */}
-          <table className="report-table">
-            <tbody>
-              <tr><td colSpan={15} className="section-header">従業員情報</td></tr>
-              <tr>
-                <td className="label-cell">従業員名</td>
-                <td className="label-cell">社員番号</td>
-                <td className="label-cell" colSpan={2}>配属先 / 役職</td>
-                <td colSpan={11}></td>
-              </tr>
-              <tr>
-                <td className="value-cell">{selectedUser.name}</td>
-                <td className="value-cell">{selectedUser.employeeId || '—'}</td>
-                <td className="value-cell" colSpan={2}>{selectedUser.department || '—'}</td>
-                <td colSpan={11}></td>
-              </tr>
-            </tbody>
-          </table>
+          {/* 上段: 勤怠情報(左) + 日数集計(左下) ＋ 時間集計(右) の横並び */}
+          <div style={{ display: "flex", gap: 32, marginBottom: 16, flexWrap: "wrap" }}>
 
-          {/* セクション2: 勤怠情報 */}
-          <table className="report-table">
-            <tbody>
-              <tr><td colSpan={15} className="section-header">勤怠情報</td></tr>
-              <tr>
-                <td className="label-cell">年月</td>
-                <td className="label-cell" colSpan={3}>期間</td>
-                <td colSpan={11}></td>
-              </tr>
-              <tr>
-                <td className="value-cell">{year}年{month}月</td>
-                <td className="value-cell" colSpan={3}>{periodStr}</td>
-                <td colSpan={11}></td>
-              </tr>
-            </tbody>
-          </table>
+            {/* 左カラム: 勤怠情報 + 日数集計 */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+              {/* 勤怠情報 */}
+              <table className="report-table">
+                <tbody>
+                  <tr><td colSpan={6} className="section-header">勤怠情報</td></tr>
+                  <tr>
+                    <td className="label-cell">年月</td>
+                    <td className="label-cell" colSpan={5}>期間</td>
+                  </tr>
+                  <tr>
+                    <td className="value-cell">{year}年{month}月</td>
+                    <td className="value-cell" colSpan={5}>{periodStr}</td>
+                  </tr>
+                </tbody>
+              </table>
 
-          {/* セクション3: 月別データ（時間集計） */}
-          <table className="report-table">
-            <tbody>
-              <tr><td colSpan={15} className="section-header">月別データ（時間集計）</td></tr>
-              <tr>
-                <td></td><td></td>
-                <td className="col-header">所定時間</td>
-                <td className="col-header">残業（8h超）</td>
-                <td className="col-header">深夜所定</td>
-                <td className="col-header">深夜残業</td>
-                <td colSpan={9}></td>
-              </tr>
-              <tr>
-                <td></td><td style={{fontWeight:700}}>平日</td>
-                <td className="num-cell">{fmtTotal(ms.weekdayRegular)}</td>
-                <td className="num-cell overtime">{fmtTotal(ms.weekdayOvertime)}</td>
-                <td className="num-cell">{fmtTotal(ms.weekdayNightRegular)}</td>
-                <td className="num-cell">{fmtTotal(ms.weekdayNightOvertime)}</td>
-                <td colSpan={9}></td>
-              </tr>
-              <tr>
-                <td style={{fontWeight:700}}>休日</td>
-                <td>法定外</td>
-                <td className="num-cell">{fmtTotal(ms.satHoliday)}</td>
-                <td className="num-cell">{fmtTotal(ms.satHolidayOvertime)}</td>
-                <td className="num-cell" colSpan={2}>{fmtTotal(ms.satNight)}</td>
-                <td colSpan={9}></td>
-              </tr>
-              <tr>
-                <td></td><td>法定</td>
-                <td className="num-cell">{fmtTotal(ms.sunHoliday)}</td>
-                <td className="num-cell">{fmtTotal(ms.sunHolidayOvertime)}</td>
-                <td className="num-cell" colSpan={2}>{fmtTotal(ms.sunNight)}</td>
-                <td colSpan={9}></td>
-              </tr>
-            </tbody>
-          </table>
+              {/* 日数集計 */}
+              <table className="report-table">
+                <tbody>
+                  <tr><td colSpan={6} className="section-header">月別データ（日数集計）</td></tr>
+                  <tr>
+                    <td className="col-header">出勤日数</td>
+                    <td className="col-header">休日出勤</td>
+                    <td className="col-header">有給</td>
+                    <td className="col-header">代休</td>
+                    <td className="col-header">振休</td>
+                    <td className="col-header">欠勤</td>
+                  </tr>
+                  <tr>
+                    <td className="num-cell">{ms.workDays}</td>
+                    <td className="num-cell">{ms.holidayWorkDays}</td>
+                    <td className="num-cell">{ms.yukyuDays}</td>
+                    <td className="num-cell">{ms.daikyuDays}</td>
+                    <td className="num-cell">{ms.furikyuDays}</td>
+                    <td className="num-cell">{ms.kekkinDays}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
 
-          {/* セクション4: 月別データ（日数集計） */}
-          <table className="report-table">
-            <tbody>
-              <tr><td colSpan={15} className="section-header">月別データ（日数集計）</td></tr>
-              <tr>
-                <td className="col-header">出勤日数</td>
-                <td className="col-header">休日出勤</td>
-                <td className="col-header">有給</td>
-                <td className="col-header">代休</td>
-                <td className="col-header">振休</td>
-                <td className="col-header">欠勤</td>
-                <td colSpan={9}></td>
-              </tr>
-              <tr>
-                <td className="num-cell">{ms.workDays}</td>
-                <td className="num-cell">{ms.holidayWorkDays}</td>
-                <td className="num-cell">{ms.yukyuDays}</td>
-                <td className="num-cell">{ms.daikyuDays}</td>
-                <td className="num-cell">{ms.furikyuDays}</td>
-                <td className="num-cell">{ms.kekkinDays}</td>
-                <td colSpan={9}></td>
-              </tr>
-            </tbody>
-          </table>
+            {/* 右カラム: 時間集計 */}
+            <div>
+              <table className="report-table">
+                <tbody>
+                  <tr><td colSpan={6} className="section-header">月別データ（時間集計）</td></tr>
+                  <tr>
+                    <td></td><td></td>
+                    <td className="col-header">所定時間</td>
+                    <td className="col-header">残業（8h超）</td>
+                    <td className="col-header">深夜所定</td>
+                    <td className="col-header">深夜残業</td>
+                  </tr>
+                  <tr>
+                    <td></td><td style={{fontWeight:700}}>平日</td>
+                    <td className="num-cell">{fmtTotal(ms.weekdayRegular)}</td>
+                    <td className="num-cell overtime">{fmtTotal(ms.weekdayOvertime)}</td>
+                    <td className="num-cell">{fmtTotal(ms.weekdayNightRegular)}</td>
+                    <td className="num-cell">{fmtTotal(ms.weekdayNightOvertime)}</td>
+                  </tr>
+                  <tr>
+                    <td style={{fontWeight:700}}>休日</td>
+                    <td>法定外</td>
+                    <td className="num-cell">{fmtTotal(ms.satHoliday)}</td>
+                    <td className="num-cell">{fmtTotal(ms.satHolidayOvertime)}</td>
+                    <td className="num-cell" colSpan={2}>{fmtTotal(ms.satNight)}</td>
+                  </tr>
+                  <tr>
+                    <td></td><td>法定</td>
+                    <td className="num-cell">{fmtTotal(ms.sunHoliday)}</td>
+                    <td className="num-cell">{fmtTotal(ms.sunHolidayOvertime)}</td>
+                    <td className="num-cell" colSpan={2}>{fmtTotal(ms.sunNight)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+          </div>
 
           {/* セクション5: 日別データ（勤怠集計） */}
           <table className="report-table">
