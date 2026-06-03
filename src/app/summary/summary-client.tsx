@@ -76,46 +76,37 @@ export default function SummaryClient({
         </div>
       </div>
 
-      {/* 従業員選択（管理者のみ） */}
-      {isAdmin && (
-        <div className="card no-print" style={{ marginBottom: 12, padding: "12px 20px" }}>
-          <select
-            className="form-select"
-            value={selectedUser.id}
-            onChange={(e) => navigate(e.target.value)}
-            style={{ minWidth: 200, padding: "8px 12px", borderRadius: 8, border: "1px solid var(--google-border)", fontSize: 14 }}
-          >
-            {allUsers.map(u => (
-              <option key={u.id} value={u.id}>{u.name}</option>
-            ))}
-          </select>
-        </div>
-      )}
-
-      {/* ヘッダー: 従業員情報 + 月切り替え（no-print） */}
+      {/* ヘッダー: プルダウン(左) + 月切り替え(中央) + PDF(右)（no-print） */}
       <div className="card no-print" style={{ marginBottom: 16, padding: "16px 20px" }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <div style={{ fontSize: 15, fontWeight: 700, display: "flex", alignItems: "center", gap: 0 }}>
-            <span>{selectedUser.name}</span>
-            <span style={{ color: "var(--google-border)", margin: "0 10px", fontWeight: 300 }}>｜</span>
-            <span style={{ fontSize: 13, fontWeight: 500, color: "var(--google-text-sub)" }}>
-              {selectedUser.employeeId || '—'}
-            </span>
-            <span style={{ color: "var(--google-border)", margin: "0 10px", fontWeight: 300 }}>｜</span>
-            <span style={{ fontSize: 13, fontWeight: 500, color: "var(--google-text-sub)" }}>
-              {selectedUser.department || '—'}
-            </span>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
+          <div style={{ minWidth: 180 }}>
+            {isAdmin ? (
+              <select
+                className="form-select"
+                value={selectedUser.id}
+                onChange={(e) => navigate(e.target.value)}
+                style={{ minWidth: 160, padding: "8px 12px", borderRadius: 8, border: "1px solid var(--google-border)", fontSize: 14 }}
+              >
+                {allUsers.map(u => (
+                  <option key={u.id} value={u.id}>{u.name}</option>
+                ))}
+              </select>
+            ) : (
+              <span style={{ fontSize: 14, fontWeight: 500 }}>{selectedUser.name}</span>
+            )}
           </div>
-          <div style={{ display: "flex", gap: 8, alignItems: "center", justifyContent: "center" }}>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             <button className="btn-tonal" onClick={prevMonth} style={{ padding: "6px 14px", borderRadius: 20, minWidth: 0 }}>◀</button>
             <span style={{ fontSize: 16, fontWeight: 700, minWidth: 120, textAlign: "center" }}>
               {year}年{month}月
             </span>
             <button className="btn-tonal" onClick={nextMonth} style={{ padding: "6px 14px", borderRadius: 20, minWidth: 0 }}>▶</button>
+          </div>
+          <div style={{ minWidth: 180, display: "flex", justifyContent: "flex-end" }}>
             <button
               onClick={handlePrint}
               className="btn-tonal"
-              style={{ padding: "6px 16px", borderRadius: 20, display: "flex", alignItems: "center", gap: 6, marginLeft: 8 }}
+              style={{ padding: "6px 16px", borderRadius: 20, display: "flex", alignItems: "center", gap: 6 }}
               title="PDF保存 / 印刷"
             >
               <FileDown size={16} />
@@ -128,6 +119,19 @@ export default function SummaryClient({
       {/* 帳票本体 */}
       <div className="card" style={{ padding: "20px", overflow: "auto" }}>
         <div style={{ overflowX: "auto" }}>
+
+          {/* 従業員情報 */}
+          <div style={{ fontSize: 15, fontWeight: 700, display: "flex", alignItems: "center", gap: 0, marginBottom: 12 }}>
+            <span>{selectedUser.name}</span>
+            <span style={{ color: "var(--google-border)", margin: "0 10px", fontWeight: 300 }}>｜</span>
+            <span style={{ fontSize: 13, fontWeight: 500, color: "var(--google-text-sub)" }}>
+              {selectedUser.employeeId || '—'}
+            </span>
+            <span style={{ color: "var(--google-border)", margin: "0 10px", fontWeight: 300 }}>｜</span>
+            <span style={{ fontSize: 13, fontWeight: 500, color: "var(--google-text-sub)" }}>
+              {selectedUser.department || '—'}
+            </span>
+          </div>
 
           {/* 上段: 勤怠情報(左) + 日数集計(左下) ＋ 時間集計(右) の横並び */}
           <div style={{ display: "flex", gap: 32, marginBottom: 16, flexWrap: "wrap" }}>
