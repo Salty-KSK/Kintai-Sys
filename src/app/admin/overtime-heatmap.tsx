@@ -23,8 +23,18 @@ type Props = {
   overtimeData: OvertimeData;
 };
 
-// 8時～翌7時の時間軸（23列）
-const HOUR_COLUMNS: number[] = [8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,0,1,2,3,4,5,6];
+// 8:00～翌7:00の時間軸を30分刻み（46列）
+const HALF_HOUR_SLOTS: number[] = [];
+for (let i = 0; i < 23; i++) {
+  const h = (8 + i) >= 24 ? (8 + i) - 24 : (8 + i);
+  HALF_HOUR_SLOTS.push(h);        // :00
+  HALF_HOUR_SLOTS.push(h + 0.5);  // :30
+}
+// 時間ヘッダー用（整数時のみ）
+const HOUR_HEADERS: number[] = [];
+for (let i = 0; i < 23; i++) {
+  HOUR_HEADERS.push((8 + i) >= 24 ? (8 + i) - 24 : (8 + i));
+}
 const DOW_NAMES = ["日", "月", "火", "水", "木", "金", "土"];
 
 // clockIn/clockOut文字列を数値に変換（"8:30"→8.5, "25:00"→25）
@@ -58,54 +68,56 @@ function isDeepNight(hour: number): boolean {
   return hour >= 22 || (hour >= 0 && hour < 5);
 }
 
-// セルの色を労働基準法に基づいて判定
+// セルの色を労働基準法に基づいて判定（30分スロット対応）
 function getCellInfo(
   clockIn: number,
   clockOut: number,
   breakMinutes: number,
-  hour: number,
+  slot: number,
   dayOfWeek: string,
   isHolidayFlag: boolean
 ): { working: boolean; color: string; label: string } {
   const EMPTY = { working: false, color: '', label: '' };
 
-  // hourを正規化: 0-7は24-31として扱う（clockIn/Outが24+で来る前提）
-  const normHour = hour < 8 ? hour + 24 : hour;
+  // slotを正規化: 0-7.5は24-31.5として扱う
+  const normSlot = slot < 8 ? slot + 24 : slot;
+  const slotWidth = 0.5; // 30分刻み
 
   // 勤務範囲外
-  if (normHour + 1 <= clockIn || normHour >= clockOut) return EMPTY;
+  if (normSlot + slotWidth <= clockIn || normSlot >= clockOut) return EMPTY;
 
   // 休憩時間（breakMinutes > 0 のとき、12時台をスキップ）
   // 複数時間の休憩の場合は12時から始まる想定
   if (breakMinutes > 0) {
     const breakStartHour = 12;
-    const breakHours = Math.ceil(breakMinutes / 60);
-    if (hour >= breakStartHour && hour < breakStartHour + breakHours) return EMPTY;
+    const breakSlots = Math.ceil(breakMinutes / 30); // 30分単位
+    const slotRealH = slot >= 24 ? slot - 24 : slot;
+    if (slotRealH >= breakStartHour && slotRealH < breakStartHour + breakSlots * 0.5) return EMPTY;
   }
 
-  // ===== 累積労働時間を計算 =====
-  // clockInからnormHourまでに何時間働いたか（休憩除く）
+  // ===== 累積労働時間を計算（30分単位） =====
   let cumulativeHours = 0;
-  for (let h = Math.floor(clockIn); h <= normHour; h++) {
-    if (h >= clockOut) break;
+  // clockInからnormSlotまでを0.5刻みでカウント
+  const startSlot = roundDown30(clockIn);
+  for (let s = startSlot; s <= normSlot; s += 0.5) {
+    if (s >= clockOut) break;
 
-    // このスロットの実働割合
-    let fraction = 1;
-    if (h < clockIn) fraction = Math.max(0, 1 - (clockIn - h)); // 開始が途中
-    if (h + 1 > clockOut) fraction = Math.min(fraction, clockOut - h); // 終了が途中
+    let fraction = 0.5;
+    if (s < clockIn) fraction = Math.max(0, 0.5 - (clockIn - s));
+    if (s + 0.5 > clockOut) fraction = Math.min(fraction, clockOut - s);
 
-    // 休憩チェック
-    const realH = h >= 24 ? h - 24 : h;
+    const realS = s >= 24 ? s - 24 : s;
     if (breakMinutes > 0) {
       const breakStartHour = 12;
-      const breakHours = Math.ceil(breakMinutes / 60);
-      if (realH >= breakStartHour && realH < breakStartHour + breakHours) continue;
+      const breakSlots = Math.ceil(breakMinutes / 30);
+      if (realS >= breakStartHour && realS < breakStartHour + breakSlots * 0.5) continue;
     }
 
     cumulativeHours += fraction;
   }
 
-  const nightFlag = isDeepNight(hour);
+  const realHour = slot >= 24 ? slot - 24 : slot;
+  const nightFlag = isDeepNight(Math.floor(realHour));
   const isSunday = dayOfWeek === '日' || isHolidayFlag;
   const isSaturday = dayOfWeek === '土' && !isHolidayFlag;
   const isOvertime = cumulativeHours > 8;
@@ -219,16 +231,17 @@ export default function OvertimeHeatmap({ overtimeData }: Props) {
       <div style={{ overflowX: 'auto', maxWidth: '100%' }}>
         <table className="heatmap-table">
           <thead>
-            {/* 時間行 */}
+            {/* 時間ヘッダー（1時間=2列のcolSpan） */}
             <tr>
               <th style={{ minWidth: 32, position: 'sticky', left: 0, zIndex: 3, background: '#F8F9FA' }}>日</th>
               <th style={{ minWidth: 22, position: 'sticky', left: 32, zIndex: 3, background: '#F8F9FA' }}>曜</th>
               <th style={{ minWidth: 72, position: 'sticky', left: 54, zIndex: 3, background: '#F8F9FA', fontSize: 10 }}>勤務時間</th>
-              {HOUR_COLUMNS.map(h => {
+              {HOUR_HEADERS.map(h => {
                 const night = isDeepNight(h);
                 return (
                   <th
                     key={h}
+                    colSpan={2}
                     style={{
                       minWidth: 24,
                       fontSize: 10,
@@ -298,22 +311,27 @@ export default function OvertimeHeatmap({ overtimeData }: Props) {
                   }}>
                     {isLeave ? '' : (clockIn !== null && clockOut !== null ? `${formatTime(clockIn)}～${formatTime(clockOut)}` : '')}
                   </td>
-                  {HOUR_COLUMNS.map(h => {
+                  {HALF_HOUR_SLOTS.map((slot, si) => {
                     if (isLeave || clockIn === null || clockOut === null) {
-                      return <td key={h} style={{ minWidth: 24, height: 18 }} />;
+                      return <td key={si} style={{ minWidth: 12, height: 18 }} />;
                     }
 
-                    const info = getCellInfo(clockIn, clockOut, d.breakMinutes, h, d.dayOfWeek, d.isHoliday);
+                    const info = getCellInfo(clockIn, clockOut, d.breakMinutes, slot, d.dayOfWeek, d.isHoliday);
+                    const isHalf = slot % 1 !== 0;
+                    const realH = Math.floor(slot >= 24 ? slot - 24 : slot);
+                    const mm = isHalf ? '30' : '00';
 
                     return (
                       <td
-                        key={h}
+                        key={si}
                         style={{
                           backgroundColor: info.working ? info.color : 'transparent',
-                          minWidth: 24,
+                          minWidth: 12,
                           height: 18,
+                          borderLeft: isHalf ? 'none' : undefined,
+                          borderRight: !isHalf ? '1px dotted #e0e0e0' : undefined,
                         }}
-                        title={info.working ? `${d.date} ${h}:00 - ${info.label}` : ''}
+                        title={info.working ? `${d.date} ${realH}:${mm} - ${info.label}` : ''}
                       />
                     );
                   })}
@@ -324,7 +342,7 @@ export default function OvertimeHeatmap({ overtimeData }: Props) {
             {days.length === 0 && (
               <tr>
                 <td
-                  colSpan={HOUR_COLUMNS.length + 2}
+                  colSpan={HALF_HOUR_SLOTS.length + 3}
                   style={{ padding: '24px 0', textAlign: 'center', color: 'var(--google-text-sub)' }}
                 >
                   データがありません
