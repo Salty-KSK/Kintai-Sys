@@ -97,34 +97,34 @@ function getCellInfo(
 
   // 法定休日（日曜・祝日）: 所定/残業の区別なし
   if (isSunday) {
-    if (nightFlag) return { working: true, color: '#FFE082', label: '法定休日+深夜（×1.6）' };
-    return { working: true, color: '#FFAB91', label: '法定休日（×1.35）' };
+    if (nightFlag) return { working: true, color: '#FFD54F', label: '法定休日+深夜（×1.6）' };
+    return { working: true, color: '#FF8A65', label: '法定休日（×1.35）' };
   }
 
   // 法定外休日（土曜）: 全て時間外扱い
   if (isSaturday) {
-    if (nightFlag) return { working: true, color: '#FFCDD2', label: '法定外休日+深夜（×1.5）' };
-    return { working: true, color: '#FFE0B2', label: '法定外休日（×1.25）' };
+    if (nightFlag) return { working: true, color: '#EF9A9A', label: '法定外休日+深夜（×1.5）' };
+    return { working: true, color: '#FFB74D', label: '法定外休日（×1.25）' };
   }
 
   // 平日
   if (isOvertime) {
-    if (nightFlag) return { working: true, color: '#FFCDD2', label: '法定時間外+深夜（×1.5）' };
-    return { working: true, color: '#FFE0B2', label: '法定時間外（×1.25）' };
+    if (nightFlag) return { working: true, color: '#EF9A9A', label: '法定時間外+深夜（×1.5）' };
+    return { working: true, color: '#FFB74D', label: '法定時間外（×1.25）' };
   }
 
   // 所定労働
-  if (nightFlag) return { working: true, color: '#FFF9C4', label: '深夜所定（×1.25）' };
-  return { working: true, color: '#C8E6FF', label: '所定労働' };
+  if (nightFlag) return { working: true, color: '#FFF176', label: '深夜所定（×1.25）' };
+  return { working: true, color: '#64B5F6', label: '所定労働' };
 }
 
 const LEGEND_ITEMS = [
-  { color: '#C8E6FF', label: '所定労働時間（1倍 割増なし）' },
-  { color: '#FFF9C4', label: '深夜労働 22:00-5:00（1.25倍 割増）' },
-  { color: '#FFE0B2', label: '法定時間外労働（1.25倍 割増）' },
-  { color: '#FFCDD2', label: '法定時間外+深夜労働（1.5倍 割増）' },
-  { color: '#FFAB91', label: '法定休日労働（1.35倍 割増）' },
-  { color: '#FFE082', label: '法定休日+深夜労働（1.6倍 割増）' },
+  { color: '#64B5F6', label: '所定労働時間（1倍 割増なし）' },
+  { color: '#FFF176', label: '深夜労働 22:00-5:00（1.25倍 割増）' },
+  { color: '#FFB74D', label: '法定時間外労働（1.25倍 割増）' },
+  { color: '#EF9A9A', label: '法定時間外+深夜労働（1.5倍 割増）' },
+  { color: '#FF8A65', label: '法定休日労働（1.35倍 割増）' },
+  { color: '#FFD54F', label: '法定休日+深夜労働（1.6倍 割増）' },
 ];
 
 export default function OvertimeHeatmap({ overtimeData }: Props) {
@@ -205,6 +205,7 @@ export default function OvertimeHeatmap({ overtimeData }: Props) {
             <tr>
               <th style={{ minWidth: 32, position: 'sticky', left: 0, zIndex: 3, background: '#F8F9FA' }}>日</th>
               <th style={{ minWidth: 22, position: 'sticky', left: 32, zIndex: 3, background: '#F8F9FA' }}>曜</th>
+              <th style={{ minWidth: 44, position: 'sticky', left: 54, zIndex: 3, background: '#F8F9FA', fontSize: 10 }}>実働</th>
               {HOUR_COLUMNS.map(h => {
                 const night = isDeepNight(h);
                 return (
@@ -260,6 +261,20 @@ export default function OvertimeHeatmap({ overtimeData }: Props) {
                     fontSize: 11,
                   }}>
                     {d.dayOfWeek}
+                  </td>
+                  <td style={{
+                    textAlign: 'center',
+                    position: 'sticky',
+                    left: 54,
+                    background: 'white',
+                    zIndex: 1,
+                    fontSize: 10,
+                    fontWeight: 500,
+                    color: 'var(--google-text-sub)',
+                    fontVariantNumeric: 'tabular-nums',
+                    fontFamily: "'Inter', sans-serif",
+                  }}>
+                    {isLeave ? '' : fmtMin(d.regularMinutes + d.overtimeMinutes + d.nightRegularMin + d.nightOvertimeMin + d.holidaySatMin + d.holidaySatNightMin + d.holidaySunMin + d.holidaySunNightMin)}
                   </td>
                   {HOUR_COLUMNS.map(h => {
                     if (isLeave || clockIn === null || clockOut === null) {
