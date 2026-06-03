@@ -212,14 +212,47 @@ export async function setDailyStatus(dateStr: string, statusType: string | null,
 }
 
 // ----------------------------------------------------------------------------------
-// 管理者によるユーザーロール変更
+// 管理者によるユーザーロール変更（3権限対応）
 // ----------------------------------------------------------------------------------
+const VALID_ROLES = ["USER", "MANAGER", "ADMIN"];
+
 export async function updateUserRole(userId: string, newRole: string) {
   const session = await getServerSession(authOptions);
   if (!session || !session.user) return { error: "Not authenticated" };
 
-  // 管理者権限チェック
-  if ((session.user as any).role !== "ADMIN") return { error: "Not authorized" };
+  const currentRole = (session.user as any).role;
+  const currentUserId = (session.user as any).id;
+  const currentDept = (session.user as any).department;
+
+  // 権限チェック: MANAGER または ADMIN のみ
+  if (currentRole !== "ADMIN" && currentRole !== "MANAGER") {
+    return { error: "Not authorized" };
+  }
+
+  // バリデーション: 有効なロールのみ許可
+  if (!VALID_ROLES.includes(newRole)) {
+    return { error: "Invalid role" };
+  }
+
+  // 自分自身のロール変更を防止
+  if (userId === currentUserId) {
+    return { error: "Cannot change own role" };
+  }
+
+  // MANAGERの制限: USERへの変更のみ + 同一部署のみ
+  if (currentRole === "MANAGER") {
+    if (newRole !== "USER") {
+      return { error: "Managers can only set role to USER" };
+    }
+    // 対象ユーザーが同一部署かチェック
+    const targetUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { department: true },
+    });
+    if (!targetUser || targetUser.department !== currentDept) {
+      return { error: "Not authorized for this user" };
+    }
+  }
 
   try {
     await prisma.user.update({
@@ -230,5 +263,28 @@ export async function updateUserRole(userId: string, newRole: string) {
     return { success: true };
   } catch (error) {
     return { error: "Failed to update role" };
+  }
+}
+
+// ----------------------------------------------------------------------------------
+// 管理責任者によるユーザー部署変更（ADMINのみ）
+// ----------------------------------------------------------------------------------
+export async function updateUserDepartment(userId: string, department: string | null) {
+  const session = await getServerSession(authOptions);
+  if (!session || !session.user) return { error: "Not authenticated" };
+
+  if ((session.user as any).role !== "ADMIN") {
+    return { error: "Not authorized - ADMIN only" };
+  }
+
+  try {
+    await prisma.user.update({
+      where: { id: userId },
+      data: { department: department || null }
+    });
+    revalidatePath("/admin");
+    return { success: true };
+  } catch (error) {
+    return { error: "Failed to update department" };
   }
 }

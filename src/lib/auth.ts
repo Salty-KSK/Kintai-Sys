@@ -19,7 +19,22 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        token.role = (user as any).role || "USER";
+      }
+      // 毎回DBからroleとdepartmentを再取得（権限変更の即時反映）
+      if (token.id) {
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { id: token.id as string },
+            select: { role: true, department: true },
+          });
+          if (dbUser) {
+            token.role = dbUser.role || "USER";
+            token.department = dbUser.department || null;
+          }
+        } catch {
+          // DB接続エラー時はキャッシュ値を維持
+          if (!token.role) token.role = "USER";
+        }
       }
       return token;
     },
@@ -27,6 +42,7 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         (session.user as any).id = token.id;
         (session.user as any).role = token.role;
+        (session.user as any).department = token.department;
       }
       return session;
     },

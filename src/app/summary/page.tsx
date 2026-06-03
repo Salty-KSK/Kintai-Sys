@@ -19,16 +19,27 @@ export default async function SummaryPage({
   if (!session || !session.user) redirect("/login");
 
   const params = await searchParams;
-  const isAdmin = (session.user as any).role === "ADMIN";
+  const currentRole = (session.user as any).role;
   const currentUserId = (session.user as any).id;
+  const currentDept = (session.user as any).department;
+  const canViewOthers = currentRole === "ADMIN" || currentRole === "MANAGER";
 
-  // 全ユーザー取得（管理者は全員、一般は自分のみ）
-  const allUsers = isAdmin
-    ? await prisma.user.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } })
-    : [{ id: currentUserId, name: (session.user as any).name || "自分" }];
+  // ユーザー取得: ADMIN=全員、MANAGER=同一部署、USER=自分のみ
+  let allUsers;
+  if (currentRole === "ADMIN") {
+    allUsers = await prisma.user.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } });
+  } else if (currentRole === "MANAGER" && currentDept) {
+    allUsers = await prisma.user.findMany({
+      where: { department: currentDept },
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    });
+  } else {
+    allUsers = [{ id: currentUserId, name: (session.user as any).name || "自分" }];
+  }
 
   // 選択中のユーザー
-  const selectedUserId = isAdmin && params.user ? params.user : currentUserId;
+  const selectedUserId = canViewOthers && params.user ? params.user : currentUserId;
 
   // 選択中の年月（デフォルト: 今月）
   const now = new Date();
@@ -101,7 +112,7 @@ export default async function SummaryPage({
     allUsers: allUsers.map(u => ({ id: u.id, name: u.name || "未設定" })),
     year,
     month,
-    isAdmin
+    isAdmin: canViewOthers
   };
 
   return <SummaryClient {...serializedData} />;
