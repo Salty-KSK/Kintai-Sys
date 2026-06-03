@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { DailySummary, MonthlySummary } from "@/lib/summaryCalc";
+import { FileDown } from "lucide-react";
 
 type Props = {
   dailySummaries: DailySummary[];
@@ -54,14 +55,28 @@ export default function SummaryClient({
     navigate(undefined, y2, m2);
   };
 
+  const handlePrint = () => {
+    window.print();
+  };
+
   const ms = monthlySummary;
 
   return (
     <div className="container animate-fade-in" style={{ maxWidth: "100%", padding: "16px" }}>
       {loading && <div className="loading-overlay"><div className="loading-spinner" /></div>}
 
+      {/* 印刷用ヘッダー（画面では非表示） */}
+      <div className="print-header">
+        <h1 style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>勤務集計表</h1>
+        <div style={{ fontSize: 13, color: "#5F6368", display: "flex", gap: 24 }}>
+          <span>{selectedUser.name}{selectedUser.department ? ` （${selectedUser.department}）` : ""}</span>
+          <span>{year}年{month}月</span>
+          {selectedUser.employeeId && <span>社員番号: {selectedUser.employeeId}</span>}
+        </div>
+      </div>
+
       {/* ヘッダー: 従業員選択 + 月切り替え */}
-      <div className="card" style={{ marginBottom: 16, padding: "16px 20px" }}>
+      <div className="card no-print" style={{ marginBottom: 16, padding: "16px 20px" }}>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 16, alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
             {isAdmin && (
@@ -91,6 +106,15 @@ export default function SummaryClient({
               {year}年{month}月
             </span>
             <button className="btn-tonal" onClick={nextMonth} style={{ padding: "6px 14px", borderRadius: 20, minWidth: 0 }}>▶</button>
+            <button
+              onClick={handlePrint}
+              className="btn-tonal"
+              style={{ padding: "6px 16px", borderRadius: 20, display: "flex", alignItems: "center", gap: 6, marginLeft: 8 }}
+              title="PDF保存 / 印刷"
+            >
+              <FileDown size={16} />
+              <span style={{ fontSize: 13 }}>PDF保存</span>
+            </button>
           </div>
         </div>
       </div>

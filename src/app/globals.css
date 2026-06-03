@@ -841,3 +841,109 @@ a {
     border-radius: 16px;
   }
 }
+
+/* ============================================
+   印刷用ヘッダー（画面では非表示）
+   ============================================ */
+.print-header {
+  display: none;
+}
+
+/* 印刷で非表示にするクラス */
+/* (no-print は @media print 内でのみ作用) */
+
+/* ============================================
+   印刷 / PDF出力用スタイル
+   ============================================ */
+@media print {
+  /* ページ設定 */
+  @page {
+    size: A4 landscape;
+    margin: 10mm 8mm;
+  }
+
+  /* 全体リセット */
+  body {
+    overflow: visible !important;
+    height: auto !important;
+    background: #fff !important;
+    font-size: 11px !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* レイアウト構造をリセット */
+  .app-layout {
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .app-container {
+    margin-left: 0 !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .main-content {
+    padding: 0 !important;
+    overflow: visible !important;
+    height: auto !important;
+  }
+
+  .container {
+    max-width: 100% !important;
+    padding: 0 !important;
+  }
+
+  /* 非表示にする要素 */
+  .app-sidebar,
+  .main-header,
+  .no-print,
+  .loading-overlay,
+  .btn-tonal,
+  .btn-primary,
+  .btn-secondary {
+    display: none !important;
+  }
+
+  /* 印刷用ヘッダーを表示 */
+  .print-header {
+    display: block !important;
+    padding: 0 0 8px 0;
+    margin-bottom: 8px;
+    border-bottom: 2px solid #1F1F1F;
+  }
+
+  /* カードのスタイルをフラットに */
+  .card {
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin-bottom: 12px !important;
+    page-break-inside: avoid;
+  }
+
+  .card:hover {
+    box-shadow: none !important;
+  }
+
+  /* テーブルを印刷向けにコンパクト化 */
+  .data-table th {
+    padding: 6px 8px !important;
+    font-size: 10px !important;
+    background-color: #E9EEF6 !important;
+  }
+
+  .data-table td {
+    padding: 4px 8px !important;
+    font-size: 10px !important;
+  }
+
+  /* アニメーション無効化 */
+  .animate-fade-in,
+  .animate-slide-up {
+    animation: none !important;
+  }
+}
