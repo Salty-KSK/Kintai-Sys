@@ -168,6 +168,7 @@ export default function OvertimeHeatmap({ overtimeData }: Props) {
             border: '1px solid var(--google-border)',
             fontSize: 14,
             minWidth: 160,
+            display: employees.length <= 1 ? 'none' : 'block',
           }}
         >
           {employees.map(emp => (
@@ -205,7 +206,7 @@ export default function OvertimeHeatmap({ overtimeData }: Props) {
             <tr>
               <th style={{ minWidth: 32, position: 'sticky', left: 0, zIndex: 3, background: '#F8F9FA' }}>日</th>
               <th style={{ minWidth: 22, position: 'sticky', left: 32, zIndex: 3, background: '#F8F9FA' }}>曜</th>
-              <th style={{ minWidth: 44, position: 'sticky', left: 54, zIndex: 3, background: '#F8F9FA', fontSize: 10 }}>実働</th>
+              <th style={{ minWidth: 72, position: 'sticky', left: 54, zIndex: 3, background: '#F8F9FA', fontSize: 10 }}>勤務時間</th>
               {HOUR_COLUMNS.map(h => {
                 const night = isDeepNight(h);
                 return (
@@ -273,8 +274,10 @@ export default function OvertimeHeatmap({ overtimeData }: Props) {
                     color: 'var(--google-text-sub)',
                     fontVariantNumeric: 'tabular-nums',
                     fontFamily: "'Inter', sans-serif",
+                    whiteSpace: 'nowrap',
+                    minWidth: 72,
                   }}>
-                    {isLeave ? '' : fmtMin(d.regularMinutes + d.overtimeMinutes + d.nightRegularMin + d.nightOvertimeMin + d.holidaySatMin + d.holidaySatNightMin + d.holidaySunMin + d.holidaySunNightMin)}
+                    {isLeave ? '' : (d.clockIn && d.clockOut ? `${d.clockIn}～${d.clockOut}` : '')}
                   </td>
                   {HOUR_COLUMNS.map(h => {
                     if (isLeave || clockIn === null || clockOut === null) {

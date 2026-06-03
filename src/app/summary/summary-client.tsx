@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 import type { DailySummary, MonthlySummary } from "@/lib/summaryCalc";
 import { FileDown } from "lucide-react";
 import { updateRecordTime, deleteRecord, updateBreakTime, setDailyStatus } from "@/app/actions";
+import OvertimeHeatmap from "@/app/admin/overtime-heatmap";
 
 type RecordItem = { id: string; type: string; timestamp: string; breakMinutes: number | null; note: string | null };
 
@@ -50,6 +51,7 @@ export default function SummaryClient({
   const [editStatus, setEditStatus] = useState<string>('');
   const [editNote, setEditNote] = useState('');
   const [isPending, startTransition] = useTransition();
+  const [activeTab, setActiveTab] = useState<'summary' | 'overtime'>('summary');
 
   const navigate = (userId?: string, y?: number, m?: number) => {
     setLoading(true);
@@ -216,7 +218,43 @@ export default function SummaryClient({
         </div>
       </div>
 
-      {/* 帳票本体 */}
+      {/* タブバー */}
+      <div className="no-print" style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+        <button
+          className={`btn-tonal`}
+          style={activeTab === 'summary' ? { backgroundColor: 'var(--google-active-pill)' } : { backgroundColor: 'transparent', color: 'var(--google-text-sub)' }}
+          onClick={() => setActiveTab('summary')}
+        >
+          勤務集計
+        </button>
+        <button
+          className={`btn-tonal`}
+          style={activeTab === 'overtime' ? { backgroundColor: 'var(--google-active-pill)' } : { backgroundColor: 'transparent', color: 'var(--google-text-sub)' }}
+          onClick={() => setActiveTab('overtime')}
+        >
+          残業管理
+        </button>
+      </div>
+
+      {/* ===== 残業管理タブ ===== */}
+      {activeTab === 'overtime' && (
+        <OvertimeHeatmap overtimeData={{
+          year,
+          month,
+          periodStr,
+          employees: [{
+            id: selectedUser.id,
+            name: selectedUser.name,
+            department: selectedUser.department || null,
+            dailySummaries,
+            monthlyOvertime: ms.weekdayOvertime + ms.weekdayNightOvertime,
+            yearlyOvertime: 0,
+          }],
+        }} />
+      )}
+
+      {/* ===== 勤務集計タブ ===== */}
+      {activeTab === 'summary' && (
       <div className="card" style={{ padding: "20px", overflow: "auto" }}>
         <div style={{ overflowX: "auto" }}>
 
@@ -499,6 +537,7 @@ export default function SummaryClient({
 
         </div>
       </div>
+      )}
     </div>
   );
 }
