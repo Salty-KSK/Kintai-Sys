@@ -3,6 +3,8 @@
 import { useState, useTransition } from "react";
 import { updateUserRole, updateUserDepartment } from "@/app/actions";
 import { formatTime } from "@/lib/attendanceCalc";
+import { type DailySummary } from "@/lib/summaryCalc";
+import OvertimeHeatmap from "./overtime-heatmap";
 
 type TodayEntry = {
   id: string;
@@ -24,11 +26,28 @@ type UserEntry = {
   department: string;
 };
 
+type EmployeeOvertime = {
+  id: string;
+  name: string;
+  department: string | null;
+  dailySummaries: DailySummary[];
+  monthlyOvertime: number;
+  yearlyOvertime: number;
+};
+
+type OvertimeData = {
+  year: number;
+  month: number;
+  periodStr: string;
+  employees: EmployeeOvertime[];
+};
+
 type Props = {
   todayData: TodayEntry[];
   allUsers: UserEntry[];
   currentRole: string;
   currentDepartment: string;
+  overtimeData: OvertimeData;
 };
 
 const ROLE_LABELS: Record<string, string> = {
@@ -43,8 +62,8 @@ const ROLE_COLORS: Record<string, { bg: string; color: string }> = {
   ADMIN: { bg: "#D3E3FD", color: "#1A73E8" },
 };
 
-export default function AdminClient({ todayData, allUsers, currentRole, currentDepartment }: Props) {
-  const [activeTab, setActiveTab] = useState<"today" | "users">("today");
+export default function AdminClient({ todayData, allUsers, currentRole, currentDepartment, overtimeData }: Props) {
+  const [activeTab, setActiveTab] = useState<"today" | "users" | "overtime">("today");
   const [isPending, startTransition] = useTransition();
   const [feedback, setFeedback] = useState<string | null>(null);
   const [editingDept, setEditingDept] = useState<string | null>(null);
@@ -102,6 +121,13 @@ export default function AdminClient({ todayData, allUsers, currentRole, currentD
           onClick={() => setActiveTab("users")}
         >
           ユーザー管理
+        </button>
+        <button
+          className={`btn-tonal ${activeTab === "overtime" ? "" : "btn-tonal-inactive"}`}
+          style={activeTab === "overtime" ? { backgroundColor: 'var(--google-active-pill)' } : { backgroundColor: 'transparent', color: 'var(--google-text-sub)' }}
+          onClick={() => setActiveTab("overtime")}
+        >
+          残業管理
         </button>
       </div>
 
@@ -293,6 +319,11 @@ export default function AdminClient({ todayData, allUsers, currentRole, currentD
             </tbody>
           </table>
         </div>
+      )}
+
+      {/* ===== 残業管理タブ ===== */}
+      {activeTab === "overtime" && (
+        <OvertimeHeatmap overtimeData={overtimeData} />
       )}
     </>
   );
