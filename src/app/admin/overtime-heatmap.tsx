@@ -36,6 +36,23 @@ function parseTime(timeStr: string | undefined): number | null {
   return h + m / 60;
 }
 
+// 30分単位切り捨て（出勤用）: 8:12 → 8:00, 8:45 → 8:30
+function roundDown30(time: number): number {
+  return Math.floor(time * 2) / 2;
+}
+
+// 30分単位切り上げ（退勤用）: 21:45 → 22:00, 21:15 → 21:30
+function roundUp30(time: number): number {
+  return Math.ceil(time * 2) / 2;
+}
+
+// 数値時刻→表示文字列
+function formatTime(time: number): string {
+  const h = Math.floor(time);
+  const m = Math.round((time - h) * 60);
+  return `${h}:${m.toString().padStart(2, '0')}`;
+}
+
 // 深夜帯判定（22:00～5:00）
 function isDeepNight(hour: number): boolean {
   return hour >= 22 || (hour >= 0 && hour < 5);
@@ -235,8 +252,10 @@ export default function OvertimeHeatmap({ overtimeData }: Props) {
 
               const isLeave = d.status?.includes('有給') || d.status?.includes('代休') || d.status?.includes('振休') || d.status?.includes('欠勤');
 
-              const clockIn = parseTime(d.clockIn);
-              const clockOut = parseTime(d.clockOut);
+              const rawIn = parseTime(d.clockIn);
+              const rawOut = parseTime(d.clockOut);
+              const clockIn = rawIn !== null ? roundDown30(rawIn) : null;
+              const clockOut = rawOut !== null ? roundUp30(rawOut) : null;
 
               return (
                 <tr key={i}>
@@ -277,7 +296,7 @@ export default function OvertimeHeatmap({ overtimeData }: Props) {
                     whiteSpace: 'nowrap',
                     minWidth: 72,
                   }}>
-                    {isLeave ? '' : (d.clockIn && d.clockOut ? `${d.clockIn}～${d.clockOut}` : '')}
+                    {isLeave ? '' : (clockIn !== null && clockOut !== null ? `${formatTime(clockIn)}～${formatTime(clockOut)}` : '')}
                   </td>
                   {HOUR_COLUMNS.map(h => {
                     if (isLeave || clockIn === null || clockOut === null) {
