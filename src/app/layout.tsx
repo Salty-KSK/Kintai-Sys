@@ -4,8 +4,8 @@ import { Providers } from '@/components/Providers';
 import AppLayout from '@/components/AppLayout';
 
 export const metadata: Metadata = {
-  title: '請求管理',
-  description: 'モダンな請求管理',
+  title: '勤怠管理｜パル設計',
+  description: '勤怠管理システム｜パル設計',
 };
 
 export default function RootLayout({
