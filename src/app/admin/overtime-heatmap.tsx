@@ -243,7 +243,7 @@ export default function OvertimeHeatmap({ overtimeData }: Props) {
                     key={h}
                     colSpan={2}
                     style={{
-                      minWidth: 24,
+                      minWidth: 36,
                       fontSize: 10,
                       background: night ? '#F5F5F5' : '#F8F9FA',
                       color: night ? '#9E9E9E' : '#5F6368',
@@ -313,7 +313,7 @@ export default function OvertimeHeatmap({ overtimeData }: Props) {
                   </td>
                   {HALF_HOUR_SLOTS.map((slot, si) => {
                     if (isLeave || clockIn === null || clockOut === null) {
-                      return <td key={si} style={{ minWidth: 12, height: 18 }} />;
+                      return <td key={si} style={{ minWidth: 18, height: 20 }} />;
                     }
 
                     const info = getCellInfo(clockIn, clockOut, d.breakMinutes, slot, d.dayOfWeek, d.isHoliday);
@@ -326,8 +326,8 @@ export default function OvertimeHeatmap({ overtimeData }: Props) {
                         key={si}
                         style={{
                           backgroundColor: info.working ? info.color : 'transparent',
-                          minWidth: 12,
-                          height: 18,
+                          minWidth: 18,
+                          height: 20,
                           borderLeft: isHalf ? 'none' : undefined,
                           borderRight: !isHalf ? '1px dotted #e0e0e0' : undefined,
                         }}
