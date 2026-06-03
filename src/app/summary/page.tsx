@@ -132,7 +132,7 @@ export default async function SummaryPage({
         }))];
       })
     ),
-    canEdit: session.user.id === selectedUserId || canViewOthers,
+    canEdit: (session.user as any).id === selectedUserId || canViewOthers,
     viewingUserId: selectedUserId,
     sessionUserId: (session.user as any).id,
   };
