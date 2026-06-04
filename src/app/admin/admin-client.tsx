@@ -33,6 +33,7 @@ type EmployeeOvertime = {
   dailySummaries: DailySummary[];
   monthlyOvertime: number;
   yearlyOvertime: number;
+  monthlyBreakdowns?: { month: number; periodStr: string; overtimeMin: number; holidayMin: number; totalMin: number }[];
 };
 
 type OvertimeData = {

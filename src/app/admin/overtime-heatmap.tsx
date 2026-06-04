@@ -3,6 +3,14 @@
 import { useState } from "react";
 import { type DailySummary, fmtMin } from "@/lib/summaryCalc";
 
+type MonthBreakdown = {
+  month: number;
+  periodStr: string;
+  overtimeMin: number;
+  holidayMin: number;
+  totalMin: number;
+};
+
 type EmployeeOvertime = {
   id: string;
   name: string;
@@ -10,6 +18,7 @@ type EmployeeOvertime = {
   dailySummaries: DailySummary[];
   monthlyOvertime: number;
   yearlyOvertime: number;
+  monthlyBreakdowns?: MonthBreakdown[];
 };
 
 type OvertimeData = {
@@ -362,6 +371,154 @@ export default function OvertimeHeatmap({ overtimeData }: Props) {
           </div>
         ))}
       </div>
+
+      {/* ===== 36協定管理表 ===== */}
+      {selectedEmp?.monthlyBreakdowns && selectedEmp.monthlyBreakdowns.length > 0 && (() => {
+        const bd = selectedEmp.monthlyBreakdowns!;
+        const allMonths = Array.from({ length: 12 }, (_, i) => i + 1);
+
+        const getVal = (m: number): MonthBreakdown | undefined => bd.find(b => b.month === m);
+        const fmtH = (min: number) => {
+          if (!min) return '';
+          const h = Math.floor(min / 60);
+          const m = min % 60;
+          return m > 0 ? `${h}:${m.toString().padStart(2, '0')}` : `${h}`;
+        };
+
+        // N か月平均を計算
+        const getAvg = (m: number, n: number): string => {
+          const vals: number[] = [];
+          for (let i = 0; i < n; i++) {
+            const target = m - i;
+            if (target < 1) return '';
+            const v = getVal(target);
+            if (!v) return '';
+            vals.push(v.totalMin);
+          }
+          if (vals.length < n) return '';
+          const avg = vals.reduce((a, b) => a + b, 0) / n;
+          return fmtH(Math.round(avg));
+        };
+
+        // N か月平均の数値版（超過判定用）
+        const getAvgNum = (m: number, n: number): number | null => {
+          const vals: number[] = [];
+          for (let i = 0; i < n; i++) {
+            const target = m - i;
+            if (target < 1) return null;
+            const v = getVal(target);
+            if (!v) return null;
+            vals.push(v.totalMin);
+          }
+          if (vals.length < n) return null;
+          return vals.reduce((a, b) => a + b, 0) / n;
+        };
+
+        // 45h超過回数
+        let exceed45count = 0;
+        for (const b of bd) {
+          if (b.overtimeMin > 45 * 60) exceed45count++;
+        }
+
+        const labelStyle: React.CSSProperties = {
+          fontWeight: 600, fontSize: 11, background: '#F8F9FA', whiteSpace: 'nowrap',
+          padding: '6px 10px', position: 'sticky', left: 0, zIndex: 1,
+        };
+        const valStyle: React.CSSProperties = {
+          fontSize: 11, textAlign: 'center', padding: '6px 6px',
+          fontVariantNumeric: 'tabular-nums', fontFamily: "'Inter', sans-serif",
+          whiteSpace: 'nowrap',
+        };
+        const highlightRow: React.CSSProperties = {
+          ...valStyle, background: '#FFFDE7', fontWeight: 700,
+        };
+
+        return (
+          <div style={{ marginTop: 24 }}>
+            <h3 className="form-label text-lg mb-4">年間残業管理表（36協定）</h3>
+            <div style={{ overflowX: 'auto' }}>
+              <table className="heatmap-table" style={{ fontSize: 11 }}>
+                <thead>
+                  <tr>
+                    <th style={{ ...labelStyle, background: '#F8F9FA', minWidth: 120 }}>締め日</th>
+                    {allMonths.map(m => (
+                      <th key={m} style={{ minWidth: 56, fontSize: 11, fontWeight: 700 }}>{m}月5日</th>
+                    ))}
+                  </tr>
+                  <tr>
+                    <th style={{ ...labelStyle, background: '#F8F9FA', fontSize: 10 }}>対象期間</th>
+                    {allMonths.map(m => {
+                      const v = getVal(m);
+                      return <th key={m} style={{ fontSize: 9, fontWeight: 400, color: '#888' }}>{v?.periodStr || ''}</th>;
+                    })}
+                  </tr>
+                </thead>
+                <tbody>
+                  {/* 時間外労働 */}
+                  <tr>
+                    <td style={labelStyle}>時間外労働</td>
+                    {allMonths.map(m => {
+                      const v = getVal(m);
+                      const exceed = v && v.overtimeMin > 45 * 60;
+                      return <td key={m} style={{ ...valStyle, color: exceed ? 'var(--danger)' : undefined, fontWeight: exceed ? 700 : undefined }}>{v ? fmtH(v.overtimeMin) : ''}</td>;
+                    })}
+                  </tr>
+                  {/* 休日労働 */}
+                  <tr>
+                    <td style={labelStyle}>休日労働</td>
+                    {allMonths.map(m => {
+                      const v = getVal(m);
+                      return <td key={m} style={valStyle}>{v ? fmtH(v.holidayMin) : ''}</td>;
+                    })}
+                  </tr>
+                  {/* 合計（黄色ハイライト） */}
+                  <tr>
+                    <td style={{ ...labelStyle, background: '#FFF9C4', fontWeight: 700 }}>時間外+休日 合計</td>
+                    {allMonths.map(m => {
+                      const v = getVal(m);
+                      const total = v?.totalMin || 0;
+                      const exceed = total > 45 * 60;
+                      return <td key={m} style={{ ...highlightRow, color: exceed ? 'var(--danger)' : undefined }}>{v ? fmtH(total) : ''}</td>;
+                    })}
+                  </tr>
+                  {/* 2～6か月平均 */}
+                  {[2,3,4,5,6].map(n => (
+                    <tr key={n}>
+                      <td style={labelStyle}>{n}か月平均</td>
+                      {allMonths.map(m => {
+                        const avg = getAvg(m, n);
+                        const avgNum = getAvgNum(m, n);
+                        const exceed = avgNum !== null && avgNum > 80 * 60;
+                        return <td key={m} style={{ ...valStyle, color: exceed ? 'var(--danger)' : undefined, fontWeight: exceed ? 700 : undefined }}>{avg}</td>;
+                      })}
+                    </tr>
+                  ))}
+                  {/* 45h超過回数 */}
+                  <tr>
+                    <td style={{ ...labelStyle, borderTop: '2px solid #DDD' }}>月45h超過回数</td>
+                    {allMonths.map(m => {
+                      const v = getVal(m);
+                      if (!v) return <td key={m} style={valStyle}></td>;
+                      // 累積カウント: 1月からm月までの超過回数
+                      let count = 0;
+                      for (let i = 1; i <= m; i++) {
+                        const bv = getVal(i);
+                        if (bv && bv.overtimeMin > 45 * 60) count++;
+                      }
+                      const exceed = count >= 6;
+                      return <td key={m} style={{ ...valStyle, borderTop: '2px solid #DDD', color: exceed ? 'var(--danger)' : undefined, fontWeight: exceed ? 700 : undefined }}>{count}</td>;
+                    })}
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            {/* 注意事項 */}
+            <div style={{ fontSize: 11, color: '#888', marginTop: 8 }}>
+              ※ 月45時間超過は年6回まで ／ 2～6か月平均は80時間以内 ／ 単月100時間未満
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

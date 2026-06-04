@@ -161,30 +161,49 @@ export default async function AdminPage() {
   });
   const yearHolidayDates = yearHolidays.map(h => h.date);
 
-  // ユーザーごとの年累計残業を計算
-  const yearlyOvertimeMap: Record<string, number> = {};
+  // ユーザーごとの月別内訳を計算（1月～当月）
+  type MonthBreakdown = { month: number; periodStr: string; overtimeMin: number; holidayMin: number; totalMin: number };
+  const yearlyBreakdownMap: Record<string, MonthBreakdown[]> = {};
+
   for (const user of overtimeUsers) {
-    let yearTotal = 0;
-    for (let m = 1; m < currentMonth; m++) {
+    const breakdowns: MonthBreakdown[] = [];
+    for (let m = 1; m <= currentMonth; m++) {
       const mDates = generateDateRange(currentYear, m);
+      const mPeriodStr = `${mDates[0].getMonth()+1}/${mDates[0].getDate()}～${mDates[mDates.length-1].getMonth()+1}/${mDates[mDates.length-1].getDate()}`;
+      let overtimeMin = 0;
+      let holidayMin = 0;
+
+      // 当月以外はyearRecords、当月はallRecordsを使う
+      const sourceRecords = m < currentMonth ? yearRecords : allRecords;
+      const sourceHolidays = m < currentMonth ? yearHolidayDates : holidayDates;
+
       for (const date of mDates) {
         const y = date.getFullYear(), mo = date.getMonth(), dd = date.getDate();
         const dayStart = new Date(Date.UTC(y, mo, dd, 5 - 9, 0, 0, 0));
         const dayEnd = new Date(Date.UTC(y, mo, dd + 1, 4 - 9, 59, 59, 999));
 
-        const dayRecords = yearRecords.filter(r =>
+        const dayRecords = sourceRecords.filter(r =>
           r.userId === user.id &&
           new Date(r.timestamp) >= dayStart &&
           new Date(r.timestamp) <= dayEnd
         );
 
         if (dayRecords.length > 0) {
-          const ds = calculateDailySummary(date, dayRecords, yearHolidayDates);
-          yearTotal += ds.overtimeMinutes + ds.nightOvertimeMin;
+          const ds = calculateDailySummary(date, dayRecords, sourceHolidays);
+          overtimeMin += ds.overtimeMinutes + ds.nightOvertimeMin;
+          holidayMin += ds.holidaySatMin + ds.holidaySatNightMin + ds.holidaySunMin + ds.holidaySunNightMin;
         }
       }
+
+      breakdowns.push({
+        month: m,
+        periodStr: mPeriodStr,
+        overtimeMin,
+        holidayMin,
+        totalMin: overtimeMin + holidayMin,
+      });
     }
-    yearlyOvertimeMap[user.id] = yearTotal;
+    yearlyBreakdownMap[user.id] = breakdowns;
   }
 
   // 当月の日別サマリーを各ユーザーごとに計算
@@ -205,6 +224,8 @@ export default async function AdminPage() {
 
     const monthlySummary = calculateMonthlySummary(dailySummaries);
     const monthlyOvertime = monthlySummary.weekdayOvertime + monthlySummary.weekdayNightOvertime;
+    const breakdowns = yearlyBreakdownMap[user.id] || [];
+    const yearlyOvertime = breakdowns.reduce((sum, b) => sum + b.totalMin, 0);
 
     return {
       id: user.id,
@@ -212,7 +233,8 @@ export default async function AdminPage() {
       department: user.department || null,
       dailySummaries,
       monthlyOvertime,
-      yearlyOvertime: (yearlyOvertimeMap[user.id] || 0) + monthlyOvertime,
+      yearlyOvertime,
+      monthlyBreakdowns: breakdowns,
     };
   });
 
