@@ -423,8 +423,8 @@ export default function SummaryClient({
                               <option key={m} value={m}>{m.toString().padStart(2,'0')}</option>
                             ))}
                           </select>
-                          <button onClick={saveClockEdit} disabled={isPending} style={{fontSize:10, cursor:'pointer', background:'none', border:'none', color:'#34A853'}}>✔</button>
-                          <button onClick={() => setEditingCell(null)} style={{fontSize:10, cursor:'pointer', background:'none', border:'none', color:'var(--danger)'}}>✖</button>
+                          <button onClick={saveClockEdit} disabled={isPending} style={{fontSize:18, cursor:'pointer', background:'none', border:'none', color:'#34A853', padding:'2px 6px'}}>✔</button>
+                          <button onClick={() => setEditingCell(null)} style={{fontSize:18, cursor:'pointer', background:'none', border:'none', color:'var(--danger)', padding:'2px 6px'}}>✖</button>
                         </div>
                       ) : (
                         d.clockIn || (canEdit ? <span style={{color:'var(--google-border)', fontSize:13}}>＋</span> : null)
@@ -448,8 +448,8 @@ export default function SummaryClient({
                               <option key={m} value={m}>{m.toString().padStart(2,'0')}</option>
                             ))}
                           </select>
-                          <button onClick={saveClockEdit} disabled={isPending} style={{fontSize:10, cursor:'pointer', background:'none', border:'none', color:'#34A853'}}>✔</button>
-                          <button onClick={() => setEditingCell(null)} style={{fontSize:10, cursor:'pointer', background:'none', border:'none', color:'var(--danger)'}}>✖</button>
+                          <button onClick={saveClockEdit} disabled={isPending} style={{fontSize:18, cursor:'pointer', background:'none', border:'none', color:'#34A853', padding:'2px 6px'}}>✔</button>
+                          <button onClick={() => setEditingCell(null)} style={{fontSize:18, cursor:'pointer', background:'none', border:'none', color:'var(--danger)', padding:'2px 6px'}}>✖</button>
                         </div>
                       ) : (
                         d.clockOut || (canEdit ? <span style={{color:'var(--google-border)', fontSize:13}}>＋</span> : null)
@@ -473,8 +473,8 @@ export default function SummaryClient({
                             <option value="75">75分</option>
                             <option value="90">90分</option>
                           </select>
-                          <button onClick={saveBreakEdit} disabled={isPending} style={{fontSize:10, cursor:'pointer', background:'none', border:'none', color:'#34A853'}}>✔</button>
-                          <button onClick={() => setEditingCell(null)} style={{fontSize:10, cursor:'pointer', background:'none', border:'none', color:'var(--danger)'}}>✖</button>
+                          <button onClick={saveBreakEdit} disabled={isPending} style={{fontSize:18, cursor:'pointer', background:'none', border:'none', color:'#34A853', padding:'2px 6px'}}>✔</button>
+                          <button onClick={() => setEditingCell(null)} style={{fontSize:18, cursor:'pointer', background:'none', border:'none', color:'var(--danger)', padding:'2px 6px'}}>✖</button>
                         </div>
                       ) : (
                         fmt(d.breakMinutes)
@@ -526,8 +526,8 @@ export default function SummaryClient({
                             />
                           )}
                           <div style={{display:'flex', gap:2}}>
-                            <button onClick={saveStatusEdit} disabled={isPending} style={{fontSize:10, cursor:'pointer', background:'none', border:'none', color:'#34A853'}}>✔</button>
-                            <button onClick={() => setEditingCell(null)} style={{fontSize:10, cursor:'pointer', background:'none', border:'none', color:'var(--danger)'}}>✖</button>
+                            <button onClick={saveStatusEdit} disabled={isPending} style={{fontSize:18, cursor:'pointer', background:'none', border:'none', color:'#34A853', padding:'2px 6px'}}>✔</button>
+                            <button onClick={() => setEditingCell(null)} style={{fontSize:18, cursor:'pointer', background:'none', border:'none', color:'var(--danger)', padding:'2px 6px'}}>✖</button>
                           </div>
                         </div>
                       ) : (
