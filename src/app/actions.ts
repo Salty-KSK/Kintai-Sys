@@ -23,8 +23,8 @@ export async function clock(type: "CLOCK_IN" | "CLOCK_OUT") {
       }
     });
 
-    // スプレッドシートへ同期送信
-    await syncSpreadsheetDaily((session.user as any).id, new Date().toISOString());
+    // スプレッドシートへ同期送信（バックグラウンド実行・待たない）
+    syncSpreadsheetDaily((session.user as any).id, new Date().toISOString()).catch(console.error);
 
     revalidatePath("/");
     return { success: true };
@@ -69,8 +69,8 @@ export async function addRecord(
       }
     });
 
-    // スプレッドシートへ同期送信
-    await syncSpreadsheetDaily(userId, newTimestamp.toISOString());
+    // スプレッドシートへ同期送信（バックグラウンド実行・待たない）
+    syncSpreadsheetDaily(userId, newTimestamp.toISOString()).catch(console.error);
 
     revalidatePath("/");
     revalidatePath("/summary");
@@ -91,8 +91,8 @@ export async function deleteRecord(id: string) {
     
     await prisma.attendanceRecord.delete({ where: { id } });
     
-    // スプレッドシートへ同期送信（削除結果を反映するため）
-    await syncSpreadsheetDaily((session.user as any).id, record.timestamp.toISOString());
+    // スプレッドシートへ同期送信（バックグラウンド実行・待たない）
+    syncSpreadsheetDaily((session.user as any).id, record.timestamp.toISOString()).catch(console.error);
     
     revalidatePath("/");
     revalidatePath("/summary");
@@ -134,8 +134,8 @@ export async function updateRecordTime(id: string, newTimeStr: string) {
       data: { timestamp: newTimestamp }
     });
     
-    // スプレッドシートへ同期送信
-    await syncSpreadsheetDaily((session.user as any).id, newTimestamp.toISOString());
+    // スプレッドシートへ同期送信（バックグラウンド実行・待たない）
+    syncSpreadsheetDaily((session.user as any).id, newTimestamp.toISOString()).catch(console.error);
 
     revalidatePath("/");
     revalidatePath("/summary");
@@ -193,8 +193,8 @@ export async function updateBreakTime(dateStr: string, minutes: number | null, t
       }
     }
 
-    // スプレッドシートへ同期送信
-    await syncSpreadsheetDaily(userId, startOfDay.toISOString());
+    // スプレッドシートへ同期送信（バックグラウンド実行・待たない）
+    syncSpreadsheetDaily(userId, startOfDay.toISOString()).catch(console.error);
 
     revalidatePath("/");
     revalidatePath("/summary");
@@ -249,8 +249,8 @@ export async function setDailyStatus(dateStr: string, statusType: string | null,
       });
     }
 
-    // スプレッドシートへ同期送信
-    await syncSpreadsheetDaily(userId, startOfDay.toISOString());
+    // スプレッドシートへ同期送信（バックグラウンド実行・待たない）
+    syncSpreadsheetDaily(userId, startOfDay.toISOString()).catch(console.error);
 
     revalidatePath("/");
     revalidatePath("/summary");
