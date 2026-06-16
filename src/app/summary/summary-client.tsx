@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import type { DailySummary, MonthlySummary } from "@/lib/summaryCalc";
 import { FileDown } from "lucide-react";
-import { updateRecordTime, deleteRecord, updateBreakTime, setDailyStatus } from "@/app/actions";
+import { updateRecordTime, deleteRecord, updateBreakTime, setDailyStatus, addRecord } from "@/app/actions";
 import OvertimeHeatmap from "@/app/admin/overtime-heatmap";
 
 type RecordItem = { id: string; type: string; timestamp: string; breakMinutes: number | null; note: string | null };
@@ -126,12 +126,17 @@ export default function SummaryClient({
     const dayRecords = records[date] || [];
     const targetType = field === 'clockIn' ? 'CLOCK_IN' : 'CLOCK_OUT';
     const record = dayRecords.find(r => r.type === targetType);
-    if (!record) {
-      setEditingCell(null);
-      return;
-    }
     const hh = editH.padStart(2, '0');
     const mm = editM.padStart(2, '0');
+    if (!record) {
+      // レコードがない場合は新規追加
+      startTransition(async () => {
+        await addRecord(date, `${hh}:${mm}`, targetType, viewingUserId);
+        setEditingCell(null);
+        router.refresh();
+      });
+      return;
+    }
     startTransition(async () => {
       await updateRecordTime(record.id, `${hh}:${mm}`);
       setEditingCell(null);
@@ -422,7 +427,7 @@ export default function SummaryClient({
                           <button onClick={() => setEditingCell(null)} style={{fontSize:10, cursor:'pointer', background:'none', border:'none', color:'var(--danger)'}}>✖</button>
                         </div>
                       ) : (
-                        d.clockIn
+                        d.clockIn || (canEdit ? <span style={{color:'var(--google-border)', fontSize:13}}>＋</span> : null)
                       )}
                     </td>
 
@@ -447,7 +452,7 @@ export default function SummaryClient({
                           <button onClick={() => setEditingCell(null)} style={{fontSize:10, cursor:'pointer', background:'none', border:'none', color:'var(--danger)'}}>✖</button>
                         </div>
                       ) : (
-                        d.clockOut
+                        d.clockOut || (canEdit ? <span style={{color:'var(--google-border)', fontSize:13}}>＋</span> : null)
                       )}
                     </td>
 

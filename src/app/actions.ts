@@ -34,6 +34,53 @@ export async function clock(type: "CLOCK_IN" | "CLOCK_OUT") {
   }
 }
 
+// ----------------------------------------------------------------------------------
+// 過去の日付に対する出勤・退勤レコードを手動追加
+// ----------------------------------------------------------------------------------
+export async function addRecord(
+  dateStr: string, // "YYYY-MM-DD"
+  timeStr: string, // "HH:MM" (JST、5時〜28時対応)
+  type: "CLOCK_IN" | "CLOCK_OUT",
+  targetUserId?: string
+) {
+  const session = await getServerSession(authOptions);
+  if (!session || !session.user) return { error: "Not authenticated" };
+
+  try {
+    const userId = targetUserId || (session.user as any).id;
+    if (!userId) return { error: "User ID not found in session" };
+
+    const [hours, minutes] = timeStr.split(":").map(Number);
+    const [yyyy, mm, dd] = dateStr.split("-").map(Number);
+
+    // 入力されたJST時刻からUTCタイムスタンプを生成（ビジネスデー対応：24時以降は翌日扱い）
+    let newTimestamp: Date;
+    if (hours >= 24) {
+      newTimestamp = new Date(Date.UTC(yyyy, mm - 1, dd + 1, hours - 24 - 9, minutes, 0, 0));
+    } else {
+      newTimestamp = new Date(Date.UTC(yyyy, mm - 1, dd, hours - 9, minutes, 0, 0));
+    }
+
+    await prisma.attendanceRecord.create({
+      data: {
+        userId,
+        type,
+        timestamp: newTimestamp,
+      }
+    });
+
+    // スプレッドシートへ同期送信
+    await syncSpreadsheetDaily(userId, newTimestamp.toISOString());
+
+    revalidatePath("/");
+    revalidatePath("/summary");
+    return { success: true };
+  } catch (error) {
+    console.error(error);
+    return { error: "Failed to add record" };
+  }
+}
+
 export async function deleteRecord(id: string) {
   const session = await getServerSession(authOptions);
   if (!session || !session.user) return { error: "Not authenticated" };
