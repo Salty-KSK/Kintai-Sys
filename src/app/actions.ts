@@ -38,7 +38,7 @@ export async function clock(type: "CLOCK_IN" | "CLOCK_OUT") {
 // 過去の日付に対する出勤・退勤レコードを手動追加
 // ----------------------------------------------------------------------------------
 export async function addRecord(
-  dateStr: string, // "YYYY-MM-DD"
+  dateStr: string, // "YYYY/MM/DD" or "YYYY-MM-DD"
   timeStr: string, // "HH:MM" (JST、5時〜28時対応)
   type: "CLOCK_IN" | "CLOCK_OUT",
   targetUserId?: string
@@ -51,7 +51,7 @@ export async function addRecord(
     if (!userId) return { error: "User ID not found in session" };
 
     const [hours, minutes] = timeStr.split(":").map(Number);
-    const [yyyy, mm, dd] = dateStr.split("-").map(Number);
+    const [yyyy, mm, dd] = dateStr.split(/[-\/]/).map(Number);
 
     // 入力されたJST時刻からUTCタイムスタンプを生成（ビジネスデー対応：24時以降は翌日扱い）
     let newTimestamp: Date;
