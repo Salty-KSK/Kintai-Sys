@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useState, useTransition, useRef, useEffect } from "react";
 import type { DailySummary, MonthlySummary } from "@/lib/summaryCalc";
 import { FileDown } from "lucide-react";
 import { updateRecordTime, deleteRecord, updateBreakTime, setDailyStatus, addRecord } from "@/app/actions";
@@ -52,6 +52,17 @@ export default function SummaryClient({
   const [editNote, setEditNote] = useState('');
   const [isPending, startTransition] = useTransition();
   const [activeTab, setActiveTab] = useState<'summary' | 'overtime'>('summary');
+
+  // 楽観的UI更新用: サーバーの応答を待たずに値を即座に表示
+  const [optimisticEdits, setOptimisticEdits] = useState<Record<string, { clockIn?: string; clockOut?: string }>>({});
+  const prevSummariesRef = useRef(dailySummaries);
+  useEffect(() => {
+    // サーバーデータが更新されたら楽観的更新をクリア
+    if (prevSummariesRef.current !== dailySummaries) {
+      setOptimisticEdits({});
+      prevSummariesRef.current = dailySummaries;
+    }
+  }, [dailySummaries]);
 
   const navigate = (userId?: string, y?: number, m?: number) => {
     setLoading(true);
@@ -128,18 +139,22 @@ export default function SummaryClient({
     const record = dayRecords.find(r => r.type === targetType);
     const hh = editH.padStart(2, '0');
     const mm = editM.padStart(2, '0');
-    if (!record) {
-      // レコードがない場合は新規追加
-      startTransition(async () => {
-        await addRecord(date, `${hh}:${mm}`, targetType, viewingUserId);
-        setEditingCell(null);
-        router.refresh();
-      });
-      return;
-    }
+    const displayTime = `${parseInt(hh)}:${mm}`;
+
+    // 楽観的更新: 先にUIを即座に更新して編集を閉じる
+    setOptimisticEdits(prev => ({
+      ...prev,
+      [date]: { ...prev[date], [field]: displayTime }
+    }));
+    setEditingCell(null);
+
+    // サーバー処理はバックグラウンドで実行
     startTransition(async () => {
-      await updateRecordTime(record.id, `${hh}:${mm}`);
-      setEditingCell(null);
+      if (!record) {
+        await addRecord(date, `${hh}:${mm}`, targetType, viewingUserId);
+      } else {
+        await updateRecordTime(record.id, `${hh}:${mm}`);
+      }
       router.refresh();
     });
   };
@@ -401,6 +416,10 @@ export default function SummaryClient({
                 const isEditingBreak = editingCell?.date === d.date && editingCell.field === 'break';
                 const isEditingStatus = editingCell?.date === d.date && editingCell.field === 'status';
 
+                // 楽観的更新値を優先表示
+                const displayClockIn = optimisticEdits[d.date]?.clockIn ?? d.clockIn;
+                const displayClockOut = optimisticEdits[d.date]?.clockOut ?? d.clockOut;
+
                 return (
                   <tr key={i} className={rowClass}>
                     <td>{d.date.slice(5)}</td>
@@ -427,7 +446,7 @@ export default function SummaryClient({
                           <button onClick={() => setEditingCell(null)} style={{fontSize:18, cursor:'pointer', background:'none', border:'none', color:'var(--danger)', padding:'2px 6px'}}>✖</button>
                         </div>
                       ) : (
-                        d.clockIn || (canEdit ? <span style={{color:'var(--google-border)', fontSize:13}}>＋</span> : null)
+                        displayClockIn || (canEdit ? <span style={{color:'var(--google-border)', fontSize:13}}>＋</span> : null)
                       )}
                     </td>
 
@@ -452,7 +471,7 @@ export default function SummaryClient({
                           <button onClick={() => setEditingCell(null)} style={{fontSize:18, cursor:'pointer', background:'none', border:'none', color:'var(--danger)', padding:'2px 6px'}}>✖</button>
                         </div>
                       ) : (
-                        d.clockOut || (canEdit ? <span style={{color:'var(--google-border)', fontSize:13}}>＋</span> : null)
+                        displayClockOut || (canEdit ? <span style={{color:'var(--google-border)', fontSize:13}}>＋</span> : null)
                       )}
                     </td>
 
