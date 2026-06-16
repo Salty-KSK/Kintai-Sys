@@ -414,7 +414,7 @@ export default function SummaryClient({
                       {isEditingClockIn ? (
                         <div className="no-print" style={{display:'flex', gap:2, alignItems:'center'}}>
                           <select value={editH} onChange={e => setEditH(e.target.value)} style={{width:50, fontSize:11, padding:'2px'}}>
-                            {Array.from({length:24}, (_, i) => i + 5).map(h => (
+                            {Array.from({length:32}, (_, i) => i + 5).map(h => (
                               <option key={h} value={h}>{h >= 24 ? `翌${h-24}` : h}</option>
                             ))}
                           </select>:
@@ -439,7 +439,7 @@ export default function SummaryClient({
                       {isEditingClockOut ? (
                         <div className="no-print" style={{display:'flex', gap:2, alignItems:'center'}}>
                           <select value={editH} onChange={e => setEditH(e.target.value)} style={{width:50, fontSize:11, padding:'2px'}}>
-                            {Array.from({length:24}, (_, i) => i + 5).map(h => (
+                            {Array.from({length:32}, (_, i) => i + 5).map(h => (
                               <option key={h} value={h}>{h >= 24 ? `翌${h-24}` : h}</option>
                             ))}
                           </select>:
