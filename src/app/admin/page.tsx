@@ -98,7 +98,7 @@ export default async function AdminPage() {
       position: true,
       employeeId: true,
     },
-    orderBy: { name: 'asc' }
+    orderBy: { employeeId: 'asc' }
   });
 
   // roleをstring型に変換（シリアライズ対応）
