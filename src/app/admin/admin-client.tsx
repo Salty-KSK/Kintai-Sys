@@ -73,8 +73,9 @@ const ROLE_COLORS: Record<string, { bg: string; color: string }> = {
 };
 
 export default function AdminClient({ todayData, allUsers, currentRole, currentUserId, currentDepartment, overtimeData, holidays }: Props) {
-  // 自分自身を一覧から除外（取締役など勤怠不要のユーザー向け）
-  const filteredUsers = allUsers.filter(u => u.id !== currentUserId);
+  // 勤務状況タブ・残業管理タブでは自分自身を除外（取締役など勤怠不要のユーザー向け）
+  const filteredTodayData = todayData.filter(u => u.id !== currentUserId);
+  const filteredOvertimeEmployees = { ...overtimeData, employees: overtimeData.employees.filter(e => e.id !== currentUserId) };
   const [activeTab, setActiveTab] = useState<"today" | "users" | "overtime" | "holidays">("today");
   const [isPending, startTransition] = useTransition();
   const [feedback, setFeedback] = useState<string | null>(null);
@@ -223,7 +224,7 @@ export default function AdminClient({ todayData, allUsers, currentRole, currentU
               </tr>
             </thead>
             <tbody>
-              {todayData.map((user) => (
+              {filteredTodayData.map((user) => (
                 <tr key={user.id}>
                   <td style={{ fontWeight: 'bold' }}>{user.name}</td>
                   {isAdmin && <td style={{ fontSize: 13, color: 'var(--google-text-sub)' }}>{user.department || '—'}</td>}
@@ -396,7 +397,7 @@ export default function AdminClient({ todayData, allUsers, currentRole, currentU
               </tr>
             </thead>
             <tbody>
-              {filteredUsers.map((user) => {
+              {allUsers.map((user) => {
                 const roleStyle = ROLE_COLORS[user.role] || ROLE_COLORS.USER;
                 const canEdit = currentRole === "ADMIN" || currentRole === "MANAGER";
 
@@ -450,7 +451,7 @@ export default function AdminClient({ todayData, allUsers, currentRole, currentU
                 );
               })}
 
-              {filteredUsers.length === 0 && (
+              {allUsers.length === 0 && (
                 <tr>
                   <td colSpan={6} className="text-center text-muted" style={{ padding: '24px 0' }}>
                     ユーザーがいません
@@ -559,7 +560,7 @@ export default function AdminClient({ todayData, allUsers, currentRole, currentU
 
       {/* ===== 残業管理タブ ===== */}
       {activeTab === "overtime" && (
-        <OvertimeHeatmap overtimeData={overtimeData} />
+        <OvertimeHeatmap overtimeData={filteredOvertimeEmployees} />
       )}
 
       {/* ===== 祝日管理タブ ===== */}

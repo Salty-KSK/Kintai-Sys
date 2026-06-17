@@ -93,6 +93,29 @@ export default async function Dashboard() {
       }
     }
   }
+  const currentRole = (session.user as any).role;
+
+  // ADMINロール（取締役など）は勤怠登録不要 → 管理画面へのショートカットのみ表示
+  if (currentRole === "ADMIN") {
+    return (
+      <div className="container animate-fade-in">
+        <div className="card" style={{ textAlign: 'center', padding: '48px 28px' }}>
+          <h2 className="form-label text-lg mb-4" style={{ fontSize: 20 }}>管理メニュー</h2>
+          <p className="text-muted" style={{ marginBottom: 24 }}>
+            勤怠集計の確認や管理設定はこちらからどうぞ。
+          </p>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 16, flexWrap: 'wrap' }}>
+            <Link href="/summary" className="btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '12px 24px', borderRadius: 20, fontSize: 14, textDecoration: 'none' }}>
+              <History size={18} /> 勤怠集計
+            </Link>
+            <Link href="/admin" className="btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '12px 24px', borderRadius: 20, fontSize: 14, textDecoration: 'none' }}>
+              <LayoutDashboard size={18} /> 管理設定
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container animate-fade-in">
