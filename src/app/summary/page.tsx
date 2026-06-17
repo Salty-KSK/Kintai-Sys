@@ -57,7 +57,7 @@ export default async function SummaryPage({
 
   // 打刻データ取得
   const startUTC = new Date(Date.UTC(startDate.getFullYear(), startDate.getMonth(), startDate.getDate(), -9, 0, 0));
-  const endUTC = new Date(Date.UTC(endDate.getFullYear(), endDate.getMonth(), endDate.getDate() + 1, 4 - 9, 59, 59, 999));
+  const endUTC = new Date(Date.UTC(endDate.getFullYear(), endDate.getMonth(), endDate.getDate() + 1, 12 - 9, 59, 59, 999));
 
   const records = await prisma.attendanceRecord.findMany({
     where: {
@@ -83,11 +83,16 @@ export default async function SummaryPage({
   });
 
   // 日別集計
+  const lastDate = dates[dates.length - 1];
   const dailySummaries: DailySummary[] = dates.map(date => {
     // その日のJSTビジネスデー境界
     const y = date.getFullYear(), m = date.getMonth(), d = date.getDate();
+    const isLastDay = date.getTime() === lastDate.getTime();
     const dayStart = new Date(Date.UTC(y, m, d, 5 - 9, 0, 0, 0));
-    const dayEnd = new Date(Date.UTC(y, m, d + 1, 4 - 9, 59, 59, 999));
+    // 最終日(25日)は翌12:59JSTまで拡張（深夜〜早朝の勤務をカバー）
+    const dayEnd = isLastDay
+      ? new Date(Date.UTC(y, m, d + 1, 12 - 9, 59, 59, 999))
+      : new Date(Date.UTC(y, m, d + 1, 4 - 9, 59, 59, 999));
 
     const dayRecords = records.filter(r => {
       const t = new Date(r.timestamp);
@@ -135,8 +140,11 @@ export default async function SummaryPage({
     records: Object.fromEntries(
       dates.map(d => {
         const dateStr = `${d.getFullYear()}/${(d.getMonth()+1).toString().padStart(2,'0')}/${d.getDate().toString().padStart(2,'0')}`;
+        const isLast = d.getTime() === lastDate.getTime();
         const startOfDay = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate(), 5 - 9, 0, 0, 0));
-        const endOfDay = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate() + 1, 4 - 9, 59, 59, 999));
+        const endOfDay = isLast
+          ? new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate() + 1, 12 - 9, 59, 59, 999))
+          : new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate() + 1, 4 - 9, 59, 59, 999));
         const dayRecords = records.filter(r => r.timestamp >= startOfDay && r.timestamp <= endOfDay);
         return [dateStr, dayRecords.map(r => ({
           id: r.id,
