@@ -377,10 +377,16 @@ export default function AdminClient({ todayData, allUsers, currentRole, currentU
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 4 }}>
                 <button
-                  className="btn-primary"
                   disabled={isPending || !newName.trim() || !newEmailLocal.trim()}
                   onClick={handleRegisterUser}
-                  style={{ padding: '6px 16px', fontSize: 12, borderRadius: 8, cursor: 'pointer' }}
+                  style={{
+                    padding: '8px 20px', fontSize: 13, fontWeight: 500, borderRadius: 20,
+                    cursor: 'pointer', backgroundColor: '#1A73E8', color: '#fff',
+                    border: 'none', transition: 'all 0.15s ease',
+                    opacity: (isPending || !newName.trim() || !newEmailLocal.trim()) ? 0.5 : 1,
+                  }}
+                  onMouseEnter={e => { if (!e.currentTarget.disabled) e.currentTarget.style.backgroundColor = '#1557B0'; }}
+                  onMouseLeave={e => { e.currentTarget.style.backgroundColor = '#1A73E8'; }}
                 >
                   登録する
                 </button>
