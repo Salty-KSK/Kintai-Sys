@@ -72,7 +72,7 @@ export function fmtMin(min: number): string {
 }
 
 /**
- * JSTの時分を分単位で取得
+ * JSTの時分を分単位で取得（0:00起算、0-1439）
  */
 function getJSTMinutes(date: Date): number {
   const jst = new Date(date.getTime() + 9 * 60 * 60 * 1000);
@@ -231,8 +231,8 @@ export function calculateDailySummary(
   const inMin = ceilTo30(getJSTMinutes(ciDate));
   const outMinRaw = getJSTMinutes(coDate);
   let outMin = ceilTo30(outMinRaw);
-  // 日跨ぎ対応
-  if (outMin < inMin) outMin += 24 * 60;
+  // 日跨ぎ対応: 退勤が出勤以前または同時なら翌日とみなす
+  if (outMin <= inMin) outMin += 24 * 60;
 
   const clockIn = fmtMin(inMin);
   const clockOut = fmtMin(outMin);

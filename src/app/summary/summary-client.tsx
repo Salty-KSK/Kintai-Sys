@@ -163,6 +163,27 @@ export default function SummaryClient({
     });
   };
 
+  const deleteClockRecord = () => {
+    if (!editingCell) return;
+    const { date, field } = editingCell;
+    const dayRecords = records[date] || [];
+    const targetType = field === 'clockIn' ? 'CLOCK_IN' : 'CLOCK_OUT';
+    const record = dayRecords.find(r => r.type === targetType);
+    if (!record) { setEditingCell(null); return; }
+
+    // 楽観的更新
+    setOptimisticEdits(prev => ({
+      ...prev,
+      [date]: { ...prev[date], [field]: '' }
+    }));
+    setEditingCell(null);
+
+    startTransition(async () => {
+      await deleteRecord(record.id);
+      router.refresh();
+    });
+  };
+
   const saveBreakEdit = () => {
     if (!editingCell) return;
     const { date } = editingCell;
@@ -521,6 +542,7 @@ export default function SummaryClient({
                             ))}
                           </select>
                           <button onClick={saveClockEdit} disabled={isPending} style={{fontSize:18, cursor:'pointer', background:'none', border:'none', color:'#34A853', padding:'2px 6px'}}>✔</button>
+                          <button onClick={deleteClockRecord} disabled={isPending} style={{fontSize:14, cursor:'pointer', background:'none', border:'none', color:'#999', padding:'2px 4px'}} title="削除">🗑️</button>
                           <button onClick={() => setEditingCell(null)} style={{fontSize:18, cursor:'pointer', background:'none', border:'none', color:'var(--danger)', padding:'2px 6px'}}>✖</button>
                         </div>
                       ) : (
@@ -546,6 +568,7 @@ export default function SummaryClient({
                             ))}
                           </select>
                           <button onClick={saveClockEdit} disabled={isPending} style={{fontSize:18, cursor:'pointer', background:'none', border:'none', color:'#34A853', padding:'2px 6px'}}>✔</button>
+                          <button onClick={deleteClockRecord} disabled={isPending} style={{fontSize:14, cursor:'pointer', background:'none', border:'none', color:'#999', padding:'2px 4px'}} title="削除">🗑️</button>
                           <button onClick={() => setEditingCell(null)} style={{fontSize:18, cursor:'pointer', background:'none', border:'none', color:'var(--danger)', padding:'2px 6px'}}>✖</button>
                         </div>
                       ) : (
