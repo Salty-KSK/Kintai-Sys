@@ -52,7 +52,7 @@ export default function SummaryClient({
   const [editStatus, setEditStatus] = useState<string>('');
   const [editDayType, setEditDayType] = useState<string>('');
   const [editNote, setEditNote] = useState('');
-  const [furikyuStep, setFurikyuStep] = useState<'select' | null>(null);
+  const [furikyuStep, setFurikyuStep] = useState<'select' | 'daikyu' | null>(null);
   const [furikyuDate, setFurikyuDate] = useState('');
   const [isPending, startTransition] = useTransition();
   const [activeTab, setActiveTab] = useState<'summary' | 'overtime'>('summary');
@@ -218,9 +218,13 @@ export default function SummaryClient({
     if (!editingCell) return;
     const { date } = editingCell;
     if (editStatus === 'STATUS_FURIKYU' && furikyuStep === null) {
-      // 振替休日が選ばれたら、対応する出勤日を選択するステップへ
       setFurikyuDate(date);
       setFurikyuStep('select');
+      return;
+    }
+    if (editStatus === 'STATUS_DAIKYU' && furikyuStep === null) {
+      setFurikyuDate(date);
+      setFurikyuStep('daikyu');
       return;
     }
     const statusType = editStatus || null;
@@ -243,9 +247,26 @@ export default function SummaryClient({
     });
   };
 
-  // 期間内の土曜日と祝日を取得（振替出勤日の候補）
+  // 代休の対象日を選択して確定
+  const confirmDaikyu = (targetDate: string) => {
+    startTransition(async () => {
+      await setDailyStatus(furikyuDate, 'STATUS_DAIKYU', targetDate, viewingUserId);
+      setFurikyuStep(null);
+      setFurikyuDate('');
+      setEditingCell(null);
+      router.refresh();
+    });
+  };
+
+  // 期間内の土曜日・日曜日・祝日を取得（振替出勤日の候補）
   const furikyuCandidates = dailySummaries.filter(d =>
     (d.dayType === 'saturday' || d.dayType === 'sunday' || d.dayType === 'holiday') && d.date !== furikyuDate
+  );
+
+  // 代休の候補: 休日出勤した日（土曜・日曜・祝日でレコードがある日）
+  const daikyuCandidates = dailySummaries.filter(d =>
+    (d.dayType === 'saturday' || d.dayType === 'sunday' || d.dayType === 'holiday') &&
+    d.clockIn && d.date !== furikyuDate
   );
 
   const startDayTypeEdit = (d: DailySummary) => {
@@ -666,6 +687,24 @@ export default function SummaryClient({
                           </div>
                           <button onClick={() => { setFurikyuStep(null); setEditingCell(null); }} style={{fontSize:11, cursor:'pointer', background:'none', border:'none', color:'var(--danger)', padding:'2px'}}>キャンセル</button>
                         </div>
+                      ) : isEditingStatus && furikyuStep === 'daikyu' && editingCell?.date === d.date ? (
+                        <div className="no-print" style={{display:'flex', flexDirection:'column', gap:4, minWidth:140, padding:4, background:'#E3F2FD', borderRadius:4, border:'1px solid #42A5F5'}}>
+                          <div style={{fontSize:11, fontWeight:700, color:'#1565C0'}}>休日出勤日を選択:</div>
+                          <div style={{maxHeight:120, overflowY:'auto'}}>
+                            {daikyuCandidates.map(c => (
+                              <button
+                                key={c.date}
+                                onClick={() => confirmDaikyu(c.date)}
+                                disabled={isPending}
+                                style={{display:'block', width:'100%', textAlign:'left', fontSize:11, padding:'3px 6px', cursor:'pointer', background:'none', border:'1px solid var(--google-border)', borderRadius:3, marginBottom:2}}
+                              >
+                                {c.date.slice(5)} ({c.dayOfWeek})
+                              </button>
+                            ))}
+                            {daikyuCandidates.length === 0 && <div style={{fontSize:10, color:'#999'}}>候補なし</div>}
+                          </div>
+                          <button onClick={() => { setFurikyuStep(null); setEditingCell(null); }} style={{fontSize:11, cursor:'pointer', background:'none', border:'none', color:'var(--danger)', padding:'2px'}}>キャンセル</button>
+                        </div>
                       ) : isEditingStatus ? (
                         <div className="no-print" style={{display:'flex', flexDirection:'column', gap:2, minWidth:100}}>
                           <select value={editStatus} onChange={e => { setEditStatus(e.target.value); if (!['STATUS_DAIKYU','STATUS_FURIKYU'].includes(e.target.value)) setEditNote(''); setFurikyuStep(null); }} style={{fontSize:11, padding:'2px'}}>
@@ -675,15 +714,6 @@ export default function SummaryClient({
                             <option value="STATUS_YUKYU">有給</option>
                             <option value="STATUS_KEKKIN">欠勤</option>
                           </select>
-                          {editStatus === 'STATUS_DAIKYU' && (
-                            <input
-                              type="text"
-                              placeholder="対象日"
-                              value={editNote}
-                              onChange={e => setEditNote(e.target.value)}
-                              style={{fontSize:11, padding:'2px 4px', width:'100%', border:'1px solid var(--google-border)', borderRadius:4}}
-                            />
-                          )}
                           <div style={{display:'flex', gap:2}}>
                             <button onClick={saveStatusEdit} disabled={isPending} style={{cursor:'pointer', background:'none', border:'none', color:'#34A853', padding:'2px 4px', display:'inline-flex', alignItems:'center'}}><Check size={14} /></button>
                             <button onClick={() => { setEditingCell(null); setFurikyuStep(null); }} style={{cursor:'pointer', background:'none', border:'none', color:'var(--danger)', padding:'2px 4px', display:'inline-flex', alignItems:'center'}}><X size={14} /></button>
