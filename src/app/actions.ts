@@ -268,8 +268,9 @@ export async function setDailyStatus(dateStr: string, statusType: string | null,
         const match = record.note.match(/(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
         if (match) {
           const [, oy, om, od] = match.map(Number);
-          const oldWorkDate = new Date(Date.UTC(oy, om - 1, od, 3, 0, 0, 0));
-          await prisma.dayTypeOverride.deleteMany({ where: { date: oldWorkDate, userId } });
+          const oldDateStart = new Date(Date.UTC(oy, om - 1, od, 0, 0, 0, 0));
+          const oldDateEnd = new Date(Date.UTC(oy, om - 1, od, 23, 59, 59, 999));
+          await prisma.dayTypeOverride.deleteMany({ where: { date: { gte: oldDateStart, lte: oldDateEnd }, userId } });
         }
       }
       await prisma.attendanceRecord.delete({ where: { id: record.id } });
@@ -463,8 +464,10 @@ export async function setDayTypeOverride(dateStr: string, dayType: string | null
     const date = new Date(Date.UTC(yyyy, mm - 1, dd, 3, 0, 0, 0)); // JST正午 = UTC 03:00
     const targetUserId = userId || null;
 
-    // 既存を削除
-    await prisma.dayTypeOverride.deleteMany({ where: { date, userId: targetUserId } });
+    // 既存を削除（UTC 00:00やUTC 03:00など時刻が異なるデータも確実に削除）
+    const dateStart = new Date(Date.UTC(yyyy, mm - 1, dd, 0, 0, 0, 0));
+    const dateEnd = new Date(Date.UTC(yyyy, mm - 1, dd, 23, 59, 59, 999));
+    await prisma.dayTypeOverride.deleteMany({ where: { date: { gte: dateStart, lte: dateEnd }, userId: targetUserId } });
 
     if (dayType) {
       // 新規作成
@@ -518,9 +521,9 @@ export async function setFurikyuWithOverride(
       if (old.note) {
         const match = old.note.match(/(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
         if (match) {
-          const [, oy, om, od] = match.map(Number);
-          const oldWorkDate = new Date(Date.UTC(oy, om - 1, od, 3, 0, 0, 0));
-          await prisma.dayTypeOverride.deleteMany({ where: { date: oldWorkDate, userId } });
+          const oldDateStart = new Date(Date.UTC(oy, om - 1, od, 0, 0, 0, 0));
+          const oldDateEnd = new Date(Date.UTC(oy, om - 1, od, 23, 59, 59, 999));
+          await prisma.dayTypeOverride.deleteMany({ where: { date: { gte: oldDateStart, lte: oldDateEnd }, userId } });
         }
       }
     }
@@ -548,7 +551,12 @@ export async function setFurikyuWithOverride(
     // JST正午(12:00) = UTC 03:00
     const workDate = new Date(Date.UTC(wy, wm - 1, wd, 3, 0, 0, 0));
     
-    await prisma.dayTypeOverride.deleteMany({ where: { date: workDate, userId } });
+    await prisma.dayTypeOverride.deleteMany({
+      where: {
+        date: { gte: new Date(Date.UTC(wy, wm - 1, wd, 0, 0, 0, 0)), lte: new Date(Date.UTC(wy, wm - 1, wd, 23, 59, 59, 999)) },
+        userId
+      }
+    });
     await prisma.dayTypeOverride.create({
       data: { date: workDate, userId, dayType: "weekday", reason: `振替休日: ${furikyuDateStr}` }
     });
