@@ -121,12 +121,14 @@ export function generateDateRange(year: number, month: number): Date[] {
 
 /**
  * 1日分の勤務集計を計算
+ * nextDayType: 翌暦日のdayType（0時以降の深夜労働を翌日の曜日で分類するため）
  */
 export function calculateDailySummary(
   date: Date,
   records: { type: string; timestamp: Date | string; breakMinutes?: number | null; note?: string | null }[],
   holidays: Date[],
-  dayTypeOverride?: DayType | null
+  dayTypeOverride?: DayType | null,
+  nextDayType?: DayType | null
 ): DailySummary {
   const dow = date.getDay();
   const dateStr = `${date.getFullYear()}/${(date.getMonth() + 1).toString().padStart(2, "0")}/${date.getDate().toString().padStart(2, "0")}`;
@@ -150,6 +152,14 @@ export function calculateDailySummary(
     dayType = dayTypeOverride;
   }
 
+  // 翌日のdayTypeが渡されなかった場合、翌暦日の曜日から自動判定
+  const effectiveNextDayType: DayType = nextDayType || (() => {
+    const nextDow = (dow + 1) % 7;
+    if (nextDow === 0) return "sunday";
+    if (nextDow === 6) return "saturday";
+    return "weekday";
+  })();
+
   // ステータスレコード確認
   const statusRecord = records.find(r => r.type.startsWith("STATUS_"));
   let leaveType: LeaveType = null;
@@ -159,11 +169,7 @@ export function calculateDailySummary(
     leaveNote = statusRecord.note || "";
   }
 
-  // 振替出勤判定: 振替休日の対象日（note に記載）が別日にある場合、
-  // この日が土日でも通常勤務扱いになる → ステータスが無い休日出勤で、
-  // 別日に STATUS_FURIKYU が存在する場合に判定
-  // 簡易実装: ステータスレコードがなく、出退勤記録がある休日
-  const isFurikaeWork = false; // サーバー側で判定して渡す
+  const isFurikaeWork = false;
 
   // 休暇日の場合
   if (leaveType) {
@@ -221,7 +227,7 @@ export function calculateDailySummary(
   const rawIn = fmtJSTTime(ciDate);
   const rawOut = fmtJSTTime(coDate);
 
-  // 15分繰り上げ
+  // 30分繰り上げ
   const inMin = ceilTo30(getJSTMinutes(ciDate));
   const outMinRaw = getJSTMinutes(coDate);
   let outMin = ceilTo30(outMinRaw);
@@ -244,44 +250,76 @@ export function calculateDailySummary(
 
   const totalWork = Math.max(0, outMin - inMin - breakMinutes);
 
-  // 深夜時間（22:00〜翌5:00）
-  const nightTotal = calcNightMinutes(inMin, outMin);
-  // 休憩は昼間に消化と仮定（深夜時間には影響しない）
-  const effectiveNight = Math.min(nightTotal, totalWork);
+  // ========================================================================
+  // 0時境界での曜日切り替え計算
+  // ========================================================================
+  const MIDNIGHT = 24 * 60; // 1440分 = 24:00
+  const NIGHT_START = 22 * 60; // 1320分 = 22:00
+  const NIGHT_END = 29 * 60; // 1740分 = 翌5:00
 
-  // 日種別に応じた分類
-  const isRegularDay = dayType === "weekday" || (isHoliday ? false : false);
-  // 土曜・日曜・祝日だが振替出勤の場合は通常日扱い
-  const treatAsRegular = isRegularDay || isFurikaeWork;
+  // 勤務時間を0時で2セグメントに分割
+  // セグメント1: 当日分（inMin 〜 min(outMin, 24:00)）
+  // セグメント2: 翌日分（max(inMin, 24:00) 〜 outMin）
+  const seg1End = Math.min(outMin, MIDNIGHT);
+  const seg1Work = Math.max(0, seg1End - inMin);
+  const seg2Start = Math.max(inMin, MIDNIGHT);
+  const seg2Work = Math.max(0, outMin - seg2Start);
+
+  // 休憩は当日分から先に消化
+  const seg1BreakUsed = Math.min(breakMinutes, seg1Work);
+  const seg2BreakUsed = breakMinutes - seg1BreakUsed;
+  const seg1Net = Math.max(0, seg1Work - seg1BreakUsed);
+  const seg2Net = Math.max(0, seg2Work - seg2BreakUsed);
+
+  // 各セグメントの深夜時間（22:00〜翌5:00）
+  const seg1Night = calcNightMinutes(inMin, seg1End);
+  const seg2Night = calcNightMinutes(seg2Start, outMin);
+  // 深夜は休憩引かない（昼間に消化と仮定）が、総労働時間を超えない
+  const seg1EffNight = Math.min(seg1Night, seg1Net);
+  const seg2EffNight = Math.min(seg2Night, seg2Net);
 
   let regularMinutes = 0, overtimeMinutes = 0;
   let nightRegularMin = 0, nightOvertimeMin = 0;
   let holidaySatMin = 0, holidaySatNightMin = 0;
   let holidaySunMin = 0, holidaySunNightMin = 0;
 
-  if (treatAsRegular) {
-    // 通常日 or 振替出勤
-    regularMinutes = Math.min(totalWork, 480);
-    overtimeMinutes = Math.max(0, totalWork - 480);
-    // 深夜分類
-    if (totalWork <= 480) {
-      nightRegularMin = effectiveNight;
-      nightOvertimeMin = 0;
-    } else {
-      nightOvertimeMin = effectiveNight;
-      nightRegularMin = 0;
-    }
-  } else if (dayType === "saturday" || (isHoliday && dow !== 0)) {
-    // 法定外休日（土曜 or 祝日で日曜以外）
-    const nonNight = Math.max(0, totalWork - effectiveNight);
-    holidaySatMin = nonNight;
-    holidaySatNightMin = effectiveNight;
-  } else if (dayType === "sunday") {
-    // 法定休日（日曜）
-    const nonNight = Math.max(0, totalWork - effectiveNight);
-    holidaySunMin = nonNight;
-    holidaySunNightMin = effectiveNight;
+  // --- セグメント1: 当日のdayTypeで計算 ---
+  classifySegment(dayType, seg1Net, seg1EffNight);
+
+  // --- セグメント2: 翌日のdayTypeで計算（0時以降） ---
+  if (seg2Net > 0) {
+    classifySegment(effectiveNextDayType, seg2Net, seg2EffNight);
   }
+
+  function classifySegment(type: DayType, workMin: number, nightMin: number) {
+    if (type === "weekday") {
+      // 平日: 所定8h / 残業
+      const currentWeekdayTotal = regularMinutes + overtimeMinutes;
+      const remaining8h = Math.max(0, 480 - currentWeekdayTotal);
+      const regPart = Math.min(workMin, remaining8h);
+      const otPart = workMin - regPart;
+      regularMinutes += regPart;
+      overtimeMinutes += otPart;
+      // 深夜は所定内か残業かで分類
+      if (otPart > 0) {
+        nightOvertimeMin += nightMin;
+      } else {
+        nightRegularMin += nightMin;
+      }
+    } else if (type === "saturday" || type === "holiday") {
+      // 法定外休日（土曜 or 祝日）
+      const nonNight = Math.max(0, workMin - nightMin);
+      holidaySatMin += nonNight;
+      holidaySatNightMin += nightMin;
+    } else if (type === "sunday") {
+      // 法定休日（日曜）
+      const nonNight = Math.max(0, workMin - nightMin);
+      holidaySunMin += nonNight;
+      holidaySunNightMin += nightMin;
+    }
+  }
+
+  const totalNightMin = seg1EffNight + seg2EffNight;
 
   return {
     date: dateStr, dayOfWeek, dayType, isHoliday,
@@ -292,7 +330,7 @@ export function calculateDailySummary(
     nightRegularMin, nightOvertimeMin,
     holidaySatMin, holidaySatNightMin,
     holidaySunMin, holidaySunNightMin,
-    totalNightMin: effectiveNight,
+    totalNightMin,
     leaveType: null, leaveNote: "", isFurikaeWork,
     status: "退勤済"
   };

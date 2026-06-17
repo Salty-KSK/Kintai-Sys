@@ -116,7 +116,32 @@ export default async function SummaryPage({
     });
     const override = dayOverrides.find(o => o.userId === selectedUserId) || dayOverrides.find(o => !o.userId);
 
-    return calculateDailySummary(date, dayRecords, holidayDates, override?.dayType as any || null);
+    // 翌暦日のdayTypeを計算（0時以降の深夜勤務を翌日の種別で分類するため）
+    const nextCalDate = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1);
+    const nextDow = nextCalDate.getDay();
+    let nextDayType: DayType = "weekday";
+    if (nextDow === 0) nextDayType = "sunday";
+    else if (nextDow === 6) nextDayType = "saturday";
+    // 翌日の祝日チェック
+    const nextIsHoliday = holidayDates.some(h => {
+      const hd = new Date(h);
+      return hd.getFullYear() === nextCalDate.getFullYear() &&
+             hd.getMonth() === nextCalDate.getMonth() &&
+             hd.getDate() === nextCalDate.getDate();
+    });
+    if (nextIsHoliday && nextDayType === "weekday") nextDayType = "holiday";
+    // 翌日のオーバーライド
+    const nextDateStr = `${nextCalDate.getFullYear()}/${(nextCalDate.getMonth()+1).toString().padStart(2,'0')}/${nextCalDate.getDate().toString().padStart(2,'0')}`;
+    const nextOverrides = dayTypeOverrides.filter(o => {
+      const od = new Date(o.date);
+      return od.getFullYear() === nextCalDate.getFullYear() &&
+             od.getMonth() === nextCalDate.getMonth() &&
+             od.getDate() === nextCalDate.getDate();
+    });
+    const nextOverride = nextOverrides.find(o => o.userId === selectedUserId) || nextOverrides.find(o => !o.userId);
+    if (nextOverride) nextDayType = nextOverride.dayType as DayType;
+
+    return calculateDailySummary(date, dayRecords, holidayDates, override?.dayType as any || null, nextDayType);
   });
 
   // 月間サマリー
