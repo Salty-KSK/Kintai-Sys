@@ -258,8 +258,8 @@ export default function ClientDashboard({ initialRecords, availableRestDays = []
                           className="input-field"
                           style={{ padding: '0.2rem', width: 'auto', fontSize: '1.25rem', fontWeight: 'bold' }}
                         >
-                          {Array.from({ length: 24 }).map((_, i) => {
-                            const hour = i + 5; // 5時から28時(翌4時)まで
+                          {Array.from({ length: 32 }).map((_, i) => {
+                            const hour = i + 5; // 5時から36時(翌12時)まで
                             const v = hour.toString().padStart(2, '0');
                             const label = hour >= 24 ? `翌${(hour - 24).toString().padStart(2, '0')}` : v;
                             return <option key={v} value={v}>{label}</option>;
