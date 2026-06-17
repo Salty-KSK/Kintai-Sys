@@ -493,8 +493,12 @@ export default function SummaryClient({
                               <button onClick={() => setEditingCell(null)} style={{fontSize:18, cursor:'pointer', background:'none', border:'none', color:'var(--danger)', padding:'2px 6px'}}>✖</button>
                             </div>
                           ) : (
-                            <>{d.dayOfWeek}{hasOverride ? '*' : ''}</>
-                          )}
+                            <div>
+                              {d.dayOfWeek}{hasOverride ? '*' : ''}
+                              {hasOverride && dayTypeOverrides[d.date]?.reason && (
+                                <div style={{fontSize:9, color:'#E65100', lineHeight:1.1, whiteSpace:'nowrap'}}>{dayTypeOverrides[d.date].reason}</div>
+                              )}
+                            </div>
                         </td>
                       );
                     })()}
