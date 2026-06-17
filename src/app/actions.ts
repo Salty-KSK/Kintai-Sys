@@ -4,7 +4,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
-import { syncSpreadsheetDaily } from "@/lib/syncSheet";
+// import { syncSpreadsheetDaily } from "@/lib/syncSheet"; // スプレッドシート同期を無効化（DB管理に一本化）
 
 export async function clock(type: "CLOCK_IN" | "CLOCK_OUT") {
   const session = await getServerSession(authOptions);
@@ -24,7 +24,7 @@ export async function clock(type: "CLOCK_IN" | "CLOCK_OUT") {
     });
 
     // スプレッドシートへ同期送信（バックグラウンド実行・待たない）
-    syncSpreadsheetDaily((session.user as any).id, new Date().toISOString()).catch(console.error);
+    // syncSpreadsheetDaily — 無効化済み
 
     revalidatePath("/");
     return { success: true };
@@ -70,7 +70,7 @@ export async function addRecord(
     });
 
     // スプレッドシートへ同期送信（バックグラウンド実行・待たない）
-    syncSpreadsheetDaily(userId, newTimestamp.toISOString()).catch(console.error);
+    // syncSpreadsheetDaily — 無効化済み
 
     revalidatePath("/");
     revalidatePath("/summary");
@@ -92,7 +92,7 @@ export async function deleteRecord(id: string) {
     await prisma.attendanceRecord.delete({ where: { id } });
     
     // スプレッドシートへ同期送信（バックグラウンド実行・待たない）
-    syncSpreadsheetDaily((session.user as any).id, record.timestamp.toISOString()).catch(console.error);
+    // syncSpreadsheetDaily — 無効化済み
     
     revalidatePath("/");
     revalidatePath("/summary");
@@ -142,7 +142,7 @@ export async function updateRecordTime(id: string, newTimeStr: string, businessD
     });
     
     // スプレッドシートへ同期送信（バックグラウンド実行・待たない）
-    syncSpreadsheetDaily((session.user as any).id, newTimestamp.toISOString()).catch(console.error);
+    // syncSpreadsheetDaily — 無効化済み
 
     revalidatePath("/");
     revalidatePath("/summary");
@@ -201,7 +201,7 @@ export async function updateBreakTime(dateStr: string, minutes: number | null, t
     }
 
     // スプレッドシートへ同期送信（バックグラウンド実行・待たない）
-    syncSpreadsheetDaily(userId, startOfDay.toISOString()).catch(console.error);
+    // syncSpreadsheetDaily — 無効化済み
 
     revalidatePath("/");
     revalidatePath("/summary");
@@ -257,7 +257,7 @@ export async function setDailyStatus(dateStr: string, statusType: string | null,
     }
 
     // スプレッドシートへ同期送信（バックグラウンド実行・待たない）
-    syncSpreadsheetDaily(userId, startOfDay.toISOString()).catch(console.error);
+    // syncSpreadsheetDaily — 無効化済み
 
     revalidatePath("/");
     revalidatePath("/summary");

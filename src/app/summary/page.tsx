@@ -101,8 +101,8 @@ export default async function SummaryPage({
       if (t < dayStart) return false;
       // 厳密な境界内(〜翌4:59): 全レコードを含む
       if (t <= strictEnd) return true;
-      // 拡張範囲(翌5:00〜12:59): CLOCK_OUT/STATUSのみ含む（CLOCK_INは次の日に属する）
-      if (t <= extendEnd && r.type !== 'CLOCK_IN') return true;
+      // 拡張範囲(翌5:00〜12:59): CLOCK_OUTのみ含む（深夜退勤が消えないように）
+      if (t <= extendEnd && r.type === 'CLOCK_OUT') return true;
       return false;
     });
     dayRecords.forEach(r => assignedIds.add(r.id));
@@ -183,7 +183,7 @@ export default async function SummaryPage({
             if (assignedRecIds.has(r.id)) return false;
             if (r.timestamp < startOfDay) return false;
             if (r.timestamp <= strictEnd) return true;
-            if (r.timestamp <= extendEnd && r.type !== 'CLOCK_IN') return true;
+            if (r.timestamp <= extendEnd && r.type === 'CLOCK_OUT') return true;
             return false;
           });
           dayRecords.forEach(r => assignedRecIds.add(r.id));
