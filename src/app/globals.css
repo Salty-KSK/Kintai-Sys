@@ -1,24 +1,32 @@
 /* ============================================
-   請求管理 | パル設計
-   Google Workspace (Material 3) テーマ globals.css
+   勤怠管理 | パル設計
+   Modern Dashboard テーマ globals.css
    ============================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap');
 
 :root {
-  --google-bg: #F0F4F9;             /* Google Workspaceの標準薄グレー背景 */
-  --google-surface: #FFFFFF;        /* カード、パネル、入力欄の白色背景 */
-  --google-primary: #0B57D0;        /* Google Workspaceのシグネチャーブルー */
-  --google-active-pill: #D3E3FD;    /* 選択中のメニューカプセル背景 */
-  --google-hover-pill: #E1E9F6;     /* ホバー時のメニューカプセル背景 */
-  --google-text-main: #1F1F1F;      /* Gmailなどでも使用される標準の墨色 */
-  --google-text-sub: #5E5E5E;       /* サブ情報テキスト用のグレー */
-  --google-border: #C7C7C7;         /* Google標準の入力欄ボーダー */
-  --google-border-light: #E3E3E3;   /* テーブル境界線などの超極薄グレー */
-  --google-shadow: 0 1px 2px 0 rgba(60,64,67,0.3), 0 1px 3px 1px rgba(60,64,67,0.15);
-  --google-transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
-  
-  /* 勤怠管理の下位互換プロパティ */
+  --google-bg: #F4F6FA;
+  --google-surface: #FFFFFF;
+  --google-primary: #4F46E5;        /* Indigo 600 */
+  --google-primary-light: #EEF2FF;  /* Indigo 50 */
+  --google-active-pill: rgba(255,255,255,0.18);
+  --google-hover-pill: rgba(255,255,255,0.10);
+  --google-text-main: #1E293B;
+  --google-text-sub: #64748B;
+  --google-border: #CBD5E1;
+  --google-border-light: #E2E8F0;
+  --google-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --google-transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Sidebar dark theme */
+  --sidebar-bg: #1E293B;
+  --sidebar-text: #CBD5E1;
+  --sidebar-text-active: #FFFFFF;
+  --sidebar-hover: rgba(255,255,255,0.08);
+  --sidebar-active-bg: rgba(79,70,229,0.25);
+
+  /* 下位互換 */
   --background: var(--google-bg);
   --foreground: var(--google-text-main);
   --card-bg: var(--google-surface);
@@ -26,7 +34,7 @@
   --primary: var(--google-primary);
   --primary-foreground: #FFFFFF;
   --border: var(--google-border-light);
-  --danger: #D93025;
+  --danger: #DC2626;
 }
 
 * {
@@ -36,13 +44,13 @@
 }
 
 body {
-  font-family: 'Noto Sans JP', sans-serif;
+  font-family: 'Inter', 'Noto Sans JP', sans-serif;
   background-color: var(--google-bg);
   color: var(--google-text-main);
   font-size: 14px;
   line-height: 1.6;
-  height: 100vh;       /* ウィンドウいっぱいに高さを固定 */
-  overflow: hidden;    /* ページ全体のスクロールバーを完全消去 */
+  height: 100vh;
+  overflow: hidden;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -62,10 +70,10 @@ a {
   background-color: var(--google-bg);
 }
 
-/* 左サイドバー (Navigation Drawer) */
+/* 左サイドバー (Dark Nav) */
 .app-sidebar {
   width: 256px;
-  background-color: var(--google-bg);
+  background: linear-gradient(180deg, #1E293B 0%, #0F172A 100%);
   display: flex;
   flex-direction: column;
   padding: 12px 16px;
@@ -75,7 +83,7 @@ a {
   left: 0;
   z-index: 100;
   user-select: none;
-  border-right: 1px solid var(--google-border-light);
+  border-right: none;
 }
 
 .sidebar-brand {
@@ -83,19 +91,19 @@ a {
   align-items: center;
   gap: 12px;
   padding: 20px 12px;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
 }
 
 .brand-icon {
   font-size: 28px !important;
-  color: var(--google-primary);
+  color: #818CF8 !important;
 }
 
 .brand-text {
   font-size: 18px;
-  font-weight: 500;
-  color: var(--google-text-main);
-  letter-spacing: -0.2px;
+  font-weight: 600;
+  color: #F8FAFC;
+  letter-spacing: -0.3px;
 }
 
 .sidebar-nav {
@@ -104,19 +112,19 @@ a {
   gap: 4px;
 }
 
-/* ナビゲーションメニュー項目 (カプセルホバーエフェクト) */
+/* ナビゲーションメニュー項目 */
 .nav-item {
   display: flex;
   align-items: center;
   gap: 16px;
   width: 100%;
-  padding: 14px 24px;
+  padding: 12px 20px;
   border: none;
   background: none;
-  border-radius: 100px; /* 完全なカプセル形状 */
+  border-radius: 12px;
   font-size: 14px;
   font-weight: 500;
-  color: var(--google-text-sub);
+  color: var(--sidebar-text);
   cursor: pointer;
   text-align: left;
   transition: var(--google-transition);
@@ -125,19 +133,25 @@ a {
 
 .nav-icon {
   font-size: 20px !important;
+  opacity: 0.7;
 }
 
-/* ホバーでペールグレー/ライトブルーカプセルへ */
 .nav-item:hover {
-  background-color: var(--google-hover-pill);
-  color: var(--google-text-main);
+  background-color: var(--sidebar-hover);
+  color: var(--sidebar-text-active);
+}
+.nav-item:hover .nav-icon {
+  opacity: 1;
 }
 
-/* 選択中は綺麗なライトブルーで強調 */
 .nav-item.active {
-  background-color: var(--google-active-pill) !important;
-  color: var(--google-primary) !important;
+  background-color: var(--sidebar-active-bg) !important;
+  color: #C7D2FE !important;
   font-weight: 600;
+}
+.nav-item.active .nav-icon {
+  opacity: 1;
+  color: #A5B4FC !important;
 }
 
 /* 右メインエリア */
@@ -152,7 +166,7 @@ a {
   position: relative;
 }
 
-/* 薄型ミニマルヘッダー */
+/* ヘッダー */
 .main-header {
   background-color: var(--google-bg);
   padding: 12px 24px;
@@ -165,7 +179,8 @@ a {
   right: 0;
   left: 0;
   z-index: 100;
-  border-bottom: 1px solid var(--google-border-light);
+  border-bottom: none;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
 }
 
 .header-status {
@@ -187,16 +202,16 @@ a {
    ============================================ */
 .card {
   background-color: var(--google-surface);
-  border-radius: 24px; /* Material 3 コンテナ標準の大きな丸角 */
-  padding: 28px;
+  border-radius: 16px;
+  padding: 24px;
   margin-bottom: 20px;
   border: 1px solid var(--google-border-light);
-  box-shadow: 0 1px 2px rgba(60,64,67,0.05);
-  transition: box-shadow 0.2s var(--google-transition);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
 }
 
 .card:hover {
-  box-shadow: 0 1px 3px rgba(60, 64, 67, 0.1);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
 }
 
 .card-title {
@@ -225,55 +240,53 @@ a {
   width: 100%;
   padding: 12px 16px;
   border: 1px solid var(--google-border);
-  border-radius: 12px; /* 丸角12pxに */
+  border-radius: 10px;
   outline: none;
   font-family: inherit;
   font-size: 1rem;
   background-color: var(--google-surface);
   color: var(--google-text-main);
-  transition: border-color 0.2s var(--google-transition), box-shadow 0.2s var(--google-transition);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .input-field:focus, .form-select:focus {
   border-color: var(--google-primary);
-  box-shadow: 0 0 0 2px rgba(11, 87, 208, 0.2); /* Googleブルーの柔らかいフォーカスリング */
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
 }
 
 /* ============================================
-   ボタンの洗練 (Material 3 Capsule Button)
+   ボタン (Modern Rounded)
    ============================================ */
 .btn-primary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  background-color: var(--google-primary);
+  background: linear-gradient(135deg, #4F46E5 0%, #4338CA 100%);
   color: #FFFFFF;
   border: none;
   padding: 12px 24px;
-  border-radius: 100px; /* カプセルボタン */
+  border-radius: 10px;
   font-weight: 600;
   cursor: pointer;
   font-size: 14px;
   transition: var(--google-transition);
   width: 100%;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  box-shadow: 0 1px 3px rgba(79,70,229,0.3);
 }
 
 .btn-primary:disabled {
-  opacity: 0.38;
+  opacity: 0.4;
   cursor: not-allowed;
-  background-color: #1F1F1F !important;
-  color: #1F1F1F !important;
 }
 
 .btn-primary:not(:disabled):hover {
-  background-color: #0b57d0e0;
-  box-shadow: 0 1px 3px rgba(11, 87, 208, 0.3);
+  box-shadow: 0 4px 12px rgba(79,70,229,0.35);
+  transform: translateY(-1px);
 }
 
 .btn-primary:not(:disabled):active {
-  transform: scale(0.98);
+  transform: translateY(0) scale(0.98);
 }
 
 .btn-secondary {
@@ -285,7 +298,7 @@ a {
   color: var(--google-primary);
   border: 1px solid var(--google-border);
   padding: 12px 24px;
-  border-radius: 100px; /* カプセルボタン */
+  border-radius: 10px;
   font-weight: 600;
   font-size: 14px;
   cursor: pointer;
@@ -294,7 +307,7 @@ a {
 }
 
 .btn-secondary:hover {
-  background-color: var(--google-hover-pill);
+  background-color: var(--google-primary-light);
   border-color: var(--google-primary);
 }
 
@@ -302,17 +315,17 @@ a {
   transform: scale(0.98);
 }
 
-/* -- Tonal Button (Material 3 Filled Tonal) -- */
+/* -- Tonal Button -- */
 .btn-tonal {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  background-color: var(--google-hover-pill);
+  background-color: var(--google-primary-light);
   color: var(--google-primary);
   border: none;
   padding: 10px 20px;
-  border-radius: 100px;
+  border-radius: 10px;
   font-weight: 600;
   font-size: 14px;
   cursor: pointer;
@@ -320,11 +333,12 @@ a {
 }
 
 .btn-tonal:hover {
-  background-color: var(--google-active-pill);
+  background-color: #E0E7FF;
+  transform: translateY(-1px);
 }
 
 .btn-tonal:active {
-  transform: scale(0.98);
+  transform: translateY(0) scale(0.98);
 }
 
 .btn-tonal-sm {
@@ -418,18 +432,19 @@ a {
   padding: 6px 16px;
   font-size: 12px;
   font-weight: 600;
-  border-radius: 100px;
+  border-radius: 8px;
   border: 1px solid var(--google-border);
   background-color: var(--google-surface);
-  color: var(--google-primary);
+  color: var(--google-text-sub);
   cursor: pointer;
   transition: var(--google-transition);
   margin-left: 8px;
 }
 
 .btn-logout:hover {
-  background-color: var(--google-hover-pill);
-  border-color: var(--google-primary);
+  background-color: #FEE2E2;
+  border-color: #DC2626;
+  color: #DC2626;
 }
 
 .btn-logout:active {
@@ -474,35 +489,37 @@ a {
   transform: scale(0.98);
 }
 
-/* 出勤ボタン — Material 3 Primary Tonal */
+/* 出勤ボタン */
 .clock-btn-in {
-  background-color: #D3E3FD;
+  background: linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%);
   color: var(--google-primary);
-  border: 2px solid transparent;
+  border: 2px solid #C7D2FE;
 }
 
 .clock-btn-in:not(:disabled):hover {
-  background-color: #c0d6f7;
-  box-shadow: 0 1px 3px rgba(11, 87, 208, 0.2);
+  background: linear-gradient(135deg, #E0E7FF 0%, #C7D2FE 100%);
+  box-shadow: 0 4px 16px rgba(79, 70, 229, 0.15);
+  border-color: #A5B4FC;
 }
 
-/* 退勤ボタン — Material 3 Error Tonal */
+/* 退勤ボタン */
 .clock-btn-out {
-  background-color: #FCE8E6;
-  color: #C5221F;
-  border: 2px solid transparent;
+  background: linear-gradient(135deg, #FEF2F2 0%, #FEE2E2 100%);
+  color: #DC2626;
+  border: 2px solid #FECACA;
 }
 
 .clock-btn-out:not(:disabled):hover {
-  background-color: #f5cfcc;
-  box-shadow: 0 1px 3px rgba(197, 34, 31, 0.2);
+  background: linear-gradient(135deg, #FEE2E2 0%, #FECACA 100%);
+  box-shadow: 0 4px 16px rgba(220, 38, 38, 0.15);
+  border-color: #FCA5A5;
 }
 
 /* 打刻済み disabled 状態 */
 .clock-btn:disabled {
-  opacity: 0.38;
+  opacity: 0.35;
   cursor: not-allowed;
-  background-color: #F0F4F9;
+  background: #F1F5F9;
   color: var(--google-text-sub);
   border-color: transparent;
 }
@@ -643,7 +660,7 @@ a {
 }
 
 /* ============================================
-   テーブルデザイン (Google Workspace スプレッドシート調)
+   テーブルデザイン (Clean Modern)
    ============================================ */
 .data-table {
   width: 100%;
@@ -651,35 +668,33 @@ a {
 }
 
 .data-table th {
-  background-color: #E9EEF6; /* Googleスプレッドシート風の淡いブルーグレー */
-  color: #444746;
-  padding: 14px 20px;
+  background-color: #F8FAFC;
+  color: var(--google-text-sub);
+  padding: 12px 20px;
   text-align: left;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
-  border-top: 1px solid var(--google-border-light);
-  border-bottom: 1px solid var(--google-border-light);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-top: none;
+  border-bottom: 2px solid var(--google-border-light);
   white-space: nowrap;
 }
 
 .data-table td {
   padding: 14px 20px;
-  border-bottom: 1px solid var(--google-border-light);
+  border-bottom: 1px solid #F1F5F9;
   font-size: 14px;
   color: var(--google-text-main);
   white-space: nowrap;
 }
 
-.data-table tbody tr:nth-child(even) td {
+.data-table tbody tr td {
   background-color: #FFFFFF;
 }
 
-.data-table tbody tr:nth-child(odd) td {
-  background-color: #F8F9FA; /* 極薄の縞模様 */
-}
-
-.data-table tbody tr:hover {
-  background-color: var(--google-hover-pill);
+.data-table tbody tr:hover td {
+  background-color: #F8FAFC;
 }
 
 /* ============================================
@@ -769,12 +784,12 @@ a {
     top: auto;
     left: 0;
     right: 0;
-    border-top: 1px solid var(--google-border-light);
+    border-top: none;
     border-right: none;
-    background-color: var(--google-surface);
+    background: var(--sidebar-bg) !important;
     padding: 0;
     justify-content: space-around;
-    box-shadow: 0 -2px 12px rgba(0,0,0,0.06);
+    box-shadow: 0 -4px 16px rgba(0,0,0,0.12);
     z-index: 1000;
   }
 
@@ -803,6 +818,7 @@ a {
     font-size: 10px;
     text-align: center;
     flex: 1;
+    color: var(--sidebar-text) !important;
   }
 
   .nav-icon {
@@ -810,15 +826,17 @@ a {
     padding: 4px 16px;
     border-radius: 100px;
     transition: var(--google-transition);
+    opacity: 1 !important;
   }
 
   .nav-item.active {
     background-color: transparent !important;
-    color: var(--google-primary) !important;
+    color: #C7D2FE !important;
   }
 
   .nav-item.active .nav-icon {
-    background-color: var(--google-active-pill);
+    background-color: rgba(79,70,229,0.3);
+    color: #A5B4FC !important;
   }
 
   .app-container {
@@ -828,7 +846,7 @@ a {
   }
 
   .main-header {
-    display: none; /* スマホではミニマルヘッダーを隠して表示領域を広く */
+    display: none;
   }
 
   .main-content {
@@ -838,7 +856,7 @@ a {
 
   .card {
     padding: 20px;
-    border-radius: 16px;
+    border-radius: 12px;
   }
 }
 
