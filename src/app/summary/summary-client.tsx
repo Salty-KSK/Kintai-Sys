@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition, useRef, useEffect } from "react";
 import type { DailySummary, MonthlySummary } from "@/lib/summaryCalc";
-import { FileDown } from "lucide-react";
+import { FileDown, Check, X, Trash2 } from "lucide-react";
 import { updateRecordTime, deleteRecord, updateBreakTime, setDailyStatus, addRecord, setDayTypeOverride, setFurikyuWithOverride } from "@/app/actions";
 import OvertimeHeatmap from "@/app/admin/overtime-heatmap";
 
@@ -332,7 +332,7 @@ export default function SummaryClient({
             name: selectedUser.name,
             department: selectedUser.department || null,
             dailySummaries,
-            monthlyOvertime: ms.weekdayOvertime + ms.weekdayNightOvertime,
+            monthlyOvertime: ms.weekdayOvertime + ms.weekdayNightOvertime + ms.weekdayNightRegular,
             yearlyOvertime: 0,
           }],
         }} />
@@ -415,7 +415,7 @@ export default function SummaryClient({
                   <tr>
                     <td></td><td style={{fontWeight:700}}>平日</td>
                     <td className="num-cell">{fmtTotal(ms.weekdayRegular)}</td>
-                    <td className="num-cell overtime">{fmtTotal(ms.weekdayOvertime)}</td>
+                    <td className="num-cell overtime">{fmtTotal(ms.weekdayOvertime - ms.weekdayNightOvertime)}</td>
                     <td className="num-cell">{fmtTotal(ms.weekdayNightRegular)}</td>
                     <td className="num-cell">{fmtTotal(ms.weekdayNightOvertime)}</td>
                   </tr>
@@ -474,7 +474,8 @@ export default function SummaryClient({
                   : isSat ? "dow-sat"
                   : "";
 
-                const hasOvertime = d.overtimeMinutes > 0;
+                const nonNightOvertime = d.overtimeMinutes - d.nightOvertimeMin;
+                const hasOvertime = nonNightOvertime > 0;
 
                 const isEditingClockIn = editingCell?.date === d.date && editingCell.field === 'clockIn';
                 const isEditingClockOut = editingCell?.date === d.date && editingCell.field === 'clockOut';
@@ -510,8 +511,8 @@ export default function SummaryClient({
                                 <option value="sunday">法定</option>
                                 <option value="holiday">祝日</option>
                               </select>
-                              <button onClick={saveDayTypeEdit} disabled={isPending} style={{fontSize:18, cursor:'pointer', background:'none', border:'none', color:'#34A853', padding:'2px 6px'}}>✔</button>
-                              <button onClick={() => setEditingCell(null)} style={{fontSize:18, cursor:'pointer', background:'none', border:'none', color:'var(--danger)', padding:'2px 6px'}}>✖</button>
+                              <button onClick={saveDayTypeEdit} disabled={isPending} style={{cursor:'pointer', background:'none', border:'none', color:'#34A853', padding:'2px 4px', display:'inline-flex', alignItems:'center'}}><Check size={14} /></button>
+                              <button onClick={() => setEditingCell(null)} style={{cursor:'pointer', background:'none', border:'none', color:'var(--danger)', padding:'2px 4px', display:'inline-flex', alignItems:'center'}}><X size={14} /></button>
                             </div>
                           ) : (
                             <div>
@@ -542,9 +543,9 @@ export default function SummaryClient({
                               <option key={m} value={m}>{m.toString().padStart(2,'0')}</option>
                             ))}
                           </select>
-                          <button onClick={saveClockEdit} disabled={isPending} style={{fontSize:18, cursor:'pointer', background:'none', border:'none', color:'#34A853', padding:'2px 6px'}}>✔</button>
-                          <button onClick={deleteClockRecord} disabled={isPending} style={{fontSize:14, cursor:'pointer', background:'none', border:'none', color:'#999', padding:'2px 4px'}} title="削除">🗑️</button>
-                          <button onClick={() => setEditingCell(null)} style={{fontSize:18, cursor:'pointer', background:'none', border:'none', color:'var(--danger)', padding:'2px 6px'}}>✖</button>
+                          <button onClick={saveClockEdit} disabled={isPending} style={{cursor:'pointer', background:'none', border:'none', color:'#34A853', padding:'2px 4px', display:'inline-flex', alignItems:'center'}}><Check size={14} /></button>
+                          <button onClick={deleteClockRecord} disabled={isPending} style={{cursor:'pointer', background:'none', border:'none', color:'#999', padding:'2px 4px', display:'inline-flex', alignItems:'center'}} title="削除"><Trash2 size={13} /></button>
+                          <button onClick={() => setEditingCell(null)} style={{cursor:'pointer', background:'none', border:'none', color:'var(--danger)', padding:'2px 4px', display:'inline-flex', alignItems:'center'}}><X size={14} /></button>
                         </div>
                       ) : (
                         displayClockIn || (canEdit ? <span style={{color:'var(--google-border)', fontSize:13}}>＋</span> : null)
@@ -568,9 +569,9 @@ export default function SummaryClient({
                               <option key={m} value={m}>{m.toString().padStart(2,'0')}</option>
                             ))}
                           </select>
-                          <button onClick={saveClockEdit} disabled={isPending} style={{fontSize:18, cursor:'pointer', background:'none', border:'none', color:'#34A853', padding:'2px 6px'}}>✔</button>
-                          <button onClick={deleteClockRecord} disabled={isPending} style={{fontSize:14, cursor:'pointer', background:'none', border:'none', color:'#999', padding:'2px 4px'}} title="削除">🗑️</button>
-                          <button onClick={() => setEditingCell(null)} style={{fontSize:18, cursor:'pointer', background:'none', border:'none', color:'var(--danger)', padding:'2px 6px'}}>✖</button>
+                          <button onClick={saveClockEdit} disabled={isPending} style={{cursor:'pointer', background:'none', border:'none', color:'#34A853', padding:'2px 4px', display:'inline-flex', alignItems:'center'}}><Check size={14} /></button>
+                          <button onClick={deleteClockRecord} disabled={isPending} style={{cursor:'pointer', background:'none', border:'none', color:'#999', padding:'2px 4px', display:'inline-flex', alignItems:'center'}} title="削除"><Trash2 size={13} /></button>
+                          <button onClick={() => setEditingCell(null)} style={{cursor:'pointer', background:'none', border:'none', color:'var(--danger)', padding:'2px 4px', display:'inline-flex', alignItems:'center'}}><X size={14} /></button>
                         </div>
                       ) : (
                         displayClockOut || (canEdit ? <span style={{color:'var(--google-border)', fontSize:13}}>＋</span> : null)
@@ -594,8 +595,8 @@ export default function SummaryClient({
                             <option value="75">75分</option>
                             <option value="90">90分</option>
                           </select>
-                          <button onClick={saveBreakEdit} disabled={isPending} style={{fontSize:18, cursor:'pointer', background:'none', border:'none', color:'#34A853', padding:'2px 6px'}}>✔</button>
-                          <button onClick={() => setEditingCell(null)} style={{fontSize:18, cursor:'pointer', background:'none', border:'none', color:'var(--danger)', padding:'2px 6px'}}>✖</button>
+                          <button onClick={saveBreakEdit} disabled={isPending} style={{cursor:'pointer', background:'none', border:'none', color:'#34A853', padding:'2px 4px', display:'inline-flex', alignItems:'center'}}><Check size={14} /></button>
+                          <button onClick={() => setEditingCell(null)} style={{cursor:'pointer', background:'none', border:'none', color:'var(--danger)', padding:'2px 4px', display:'inline-flex', alignItems:'center'}}><X size={14} /></button>
                         </div>
                       ) : (
                         fmt(d.breakMinutes)
@@ -607,7 +608,7 @@ export default function SummaryClient({
                       color: hasOvertime ? "var(--danger)" : "inherit",
                       fontWeight: hasOvertime ? 700 : 400
                     }}>
-                      {fmt(d.overtimeMinutes)}
+                      {fmt(nonNightOvertime)}
                     </td>
                     <td>{fmt(d.nightRegularMin)}</td>
                     <td>{fmt(d.nightOvertimeMin)}</td>
@@ -665,8 +666,8 @@ export default function SummaryClient({
                             />
                           )}
                           <div style={{display:'flex', gap:2}}>
-                            <button onClick={saveStatusEdit} disabled={isPending} style={{fontSize:18, cursor:'pointer', background:'none', border:'none', color:'#34A853', padding:'2px 6px'}}>✔</button>
-                            <button onClick={() => { setEditingCell(null); setFurikyuStep(null); }} style={{fontSize:18, cursor:'pointer', background:'none', border:'none', color:'var(--danger)', padding:'2px 6px'}}>✖</button>
+                            <button onClick={saveStatusEdit} disabled={isPending} style={{cursor:'pointer', background:'none', border:'none', color:'#34A853', padding:'2px 4px', display:'inline-flex', alignItems:'center'}}><Check size={14} /></button>
+                            <button onClick={() => { setEditingCell(null); setFurikyuStep(null); }} style={{cursor:'pointer', background:'none', border:'none', color:'var(--danger)', padding:'2px 4px', display:'inline-flex', alignItems:'center'}}><X size={14} /></button>
                           </div>
                         </div>
                       ) : (
