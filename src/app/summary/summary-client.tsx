@@ -421,12 +421,12 @@ export default function SummaryClient({
                 <tbody>
                   <tr><td colSpan={6} className="section-header">月別データ（日数集計）</td></tr>
                   <tr>
-                    <td className="col-header">出勤日数</td>
-                    <td className="col-header">休日出勤日数</td>
-                    <td className="col-header">有休取得日数</td>
-                    <td className="col-header">代替休日日数</td>
-                    <td className="col-header">振替休日日数</td>
-                    <td className="col-header">欠勤日数</td>
+                    <td className="col-header" style={{ width: '95px', minWidth: '95px' }}>出勤日数</td>
+                    <td className="col-header" style={{ width: '95px', minWidth: '95px' }}>休日出勤日数</td>
+                    <td className="col-header" style={{ width: '95px', minWidth: '95px' }}>有休取得日数</td>
+                    <td className="col-header" style={{ width: '95px', minWidth: '95px' }}>代替休日日数</td>
+                    <td className="col-header" style={{ width: '95px', minWidth: '95px' }}>振替休日日数</td>
+                    <td className="col-header" style={{ width: '95px', minWidth: '95px' }}>欠勤日数</td>
                   </tr>
                   <tr>
                     <td className="num-cell">{ms.workDays}</td>
