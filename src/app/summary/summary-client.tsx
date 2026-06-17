@@ -157,7 +157,7 @@ export default function SummaryClient({
       if (!record) {
         await addRecord(date, `${hh}:${mm}`, targetType, viewingUserId);
       } else {
-        await updateRecordTime(record.id, `${hh}:${mm}`);
+        await updateRecordTime(record.id, `${hh}:${mm}`, date);
       }
       router.refresh();
     });

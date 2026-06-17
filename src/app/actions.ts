@@ -102,7 +102,7 @@ export async function deleteRecord(id: string) {
   }
 }
 
-export async function updateRecordTime(id: string, newTimeStr: string) {
+export async function updateRecordTime(id: string, newTimeStr: string, businessDateStr?: string) {
   const session = await getServerSession(authOptions);
   if (!session || !session.user) return { error: "Not authenticated" };
 
@@ -110,18 +110,25 @@ export async function updateRecordTime(id: string, newTimeStr: string) {
     const record = await prisma.attendanceRecord.findUnique({ where: { id } });
     if (!record) return { error: "Not found" };
 
-    // 時刻文字列 (HH:MM) とBusiness Dayを基準にタイムスタンプを更新する
     const [hours, minutes] = newTimeStr.split(":").map(Number);
-    // 元のタイムスタンプをJSTとして解釈
-    const baseDate = new Date(record.timestamp.getTime() + 9 * 60 * 60 * 1000);
-    if (baseDate.getUTCHours() < 5) baseDate.setUTCDate(baseDate.getUTCDate() - 1);
-    
-    // yyyy-mm-dd を特定
-    const yyyy = baseDate.getUTCFullYear();
-    const mm = baseDate.getUTCMonth();
-    const dd = baseDate.getUTCDate();
 
-    // 入力された JST hour, JST minute から対象のUTCタイムスタンプを生成
+    let yyyy: number, mm: number, dd: number;
+
+    if (businessDateStr) {
+      // 呼び出し元からビジネス日付が明示的に渡された場合はそれを使う
+      const [y, m, d] = businessDateStr.split(/[-\/]/).map(Number);
+      yyyy = y;
+      mm = m - 1; // 0-indexed
+      dd = d;
+    } else {
+      // レガシー: タイムスタンプから導出（後方互換）
+      const baseDate = new Date(record.timestamp.getTime() + 9 * 60 * 60 * 1000);
+      if (baseDate.getUTCHours() < 5) baseDate.setUTCDate(baseDate.getUTCDate() - 1);
+      yyyy = baseDate.getUTCFullYear();
+      mm = baseDate.getUTCMonth();
+      dd = baseDate.getUTCDate();
+    }
+
     let newTimestamp: Date;
     if (hours >= 24) {
       newTimestamp = new Date(Date.UTC(yyyy, mm, dd + 1, hours - 24 - 9, minutes, 0, 0));

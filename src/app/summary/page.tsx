@@ -82,22 +82,26 @@ export default async function SummaryPage({
     }
   });
 
-  // 日別集計
+  // 日別集計（レコードの重複割り当て防止用セット）
   const lastDate = dates[dates.length - 1];
+  const assignedIds = new Set<string>();
   const dailySummaries: DailySummary[] = dates.map(date => {
-    // その日のJSTビジネスデー境界
     const y = date.getFullYear(), m = date.getMonth(), d = date.getDate();
-    const isLastDay = date.getTime() === lastDate.getTime();
-    const dayStart = new Date(Date.UTC(y, m, d, 5 - 9, 0, 0, 0));
-    // 最終日(25日)は翌12:59JSTまで拡張（深夜〜早朝の勤務をカバー）
-    const dayEnd = isLastDay
-      ? new Date(Date.UTC(y, m, d + 1, 12 - 9, 59, 59, 999))
-      : new Date(Date.UTC(y, m, d + 1, 4 - 9, 59, 59, 999));
+    const dayStart = new Date(Date.UTC(y, m, d, 5 - 9, 0, 0, 0));          // 05:00 JST
+    const strictEnd = new Date(Date.UTC(y, m, d + 1, 4 - 9, 59, 59, 999)); // 翌04:59 JST
+    const extendEnd = new Date(Date.UTC(y, m, d + 1, 12 - 9, 59, 59, 999)); // 翌12:59 JST
 
     const dayRecords = records.filter(r => {
+      if (assignedIds.has(r.id)) return false;
       const t = new Date(r.timestamp);
-      return t >= dayStart && t <= dayEnd;
+      if (t < dayStart) return false;
+      // 厳密な境界内(〜翌4:59): 全レコードを含む
+      if (t <= strictEnd) return true;
+      // 拡張範囲(翌5:00〜12:59): CLOCK_OUT/STATUSのみ含む（CLOCK_INは次の日に属する）
+      if (t <= extendEnd && r.type !== 'CLOCK_IN') return true;
+      return false;
     });
+    dayRecords.forEach(r => assignedIds.add(r.id));
 
     // その日のオーバーライドを検索
     const override = dayTypeOverrides.find(o => {
@@ -137,24 +141,32 @@ export default async function SummaryPage({
     month,
     isAdmin: canViewOthers,
     periodStr,
-    records: Object.fromEntries(
-      dates.map(d => {
-        const dateStr = `${d.getFullYear()}/${(d.getMonth()+1).toString().padStart(2,'0')}/${d.getDate().toString().padStart(2,'0')}`;
-        const isLast = d.getTime() === lastDate.getTime();
-        const startOfDay = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate(), 5 - 9, 0, 0, 0));
-        const endOfDay = isLast
-          ? new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate() + 1, 12 - 9, 59, 59, 999))
-          : new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate() + 1, 4 - 9, 59, 59, 999));
-        const dayRecords = records.filter(r => r.timestamp >= startOfDay && r.timestamp <= endOfDay);
-        return [dateStr, dayRecords.map(r => ({
-          id: r.id,
-          type: r.type,
-          timestamp: r.timestamp.toISOString(),
-          breakMinutes: (r as any).breakMinutes ?? null,
-          note: (r as any).note ?? null
-        }))];
-      })
-    ),
+    records: (() => {
+      const assignedRecIds = new Set<string>();
+      return Object.fromEntries(
+        dates.map(d => {
+          const dateStr = `${d.getFullYear()}/${(d.getMonth()+1).toString().padStart(2,'0')}/${d.getDate().toString().padStart(2,'0')}`;
+          const startOfDay = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate(), 5 - 9, 0, 0, 0));
+          const strictEnd = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate() + 1, 4 - 9, 59, 59, 999));
+          const extendEnd = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate() + 1, 12 - 9, 59, 59, 999));
+          const dayRecords = records.filter(r => {
+            if (assignedRecIds.has(r.id)) return false;
+            if (r.timestamp < startOfDay) return false;
+            if (r.timestamp <= strictEnd) return true;
+            if (r.timestamp <= extendEnd && r.type !== 'CLOCK_IN') return true;
+            return false;
+          });
+          dayRecords.forEach(r => assignedRecIds.add(r.id));
+          return [dateStr, dayRecords.map(r => ({
+            id: r.id,
+            type: r.type,
+            timestamp: r.timestamp.toISOString(),
+            breakMinutes: (r as any).breakMinutes ?? null,
+            note: (r as any).note ?? null
+          }))];
+        })
+      );
+    })(),
     dayTypeOverrides: Object.fromEntries(
       dayTypeOverrides.map(o => [
         `${new Date(o.date).getFullYear()}/${(new Date(o.date).getMonth()+1).toString().padStart(2,'0')}/${new Date(o.date).getDate().toString().padStart(2,'0')}`,

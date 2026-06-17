@@ -66,8 +66,17 @@ export default function ClientDashboard({ initialRecords, availableRestDays = []
   const saveEdit = () => {
     if (!editingRecord) return;
     const newTime = `${editingRecord.h}:${editingRecord.m}`;
+    // editingRecordのタイムスタンプからビジネス日付(JST)を導出
+    const rec = initialRecords.find(r => r.id === editingRecord.id);
+    let bizDate: string | undefined;
+    if (rec) {
+      const t = new Date(rec.timestamp);
+      const jst = new Date(t.getTime() + 9 * 60 * 60 * 1000);
+      if (jst.getUTCHours() < 5) jst.setUTCDate(jst.getUTCDate() - 1);
+      bizDate = `${jst.getUTCFullYear()}/${(jst.getUTCMonth() + 1).toString().padStart(2, '0')}/${jst.getUTCDate().toString().padStart(2, '0')}`;
+    }
     startTransition(async () => {
-      await updateRecordTime(editingRecord.id, newTime);
+      await updateRecordTime(editingRecord.id, newTime, bizDate);
       setEditingRecord(null);
     });
   };
