@@ -184,6 +184,25 @@ export default function SummaryClient({
     });
   };
 
+  const deleteDayRecords = (date: string) => {
+    const dayRecords = records[date] || [];
+    if (dayRecords.length === 0) return;
+    if (!confirm(`${date.slice(5)} のデータを全て削除しますか？`)) return;
+
+    // 楽観的更新
+    setOptimisticEdits(prev => ({
+      ...prev,
+      [date]: { clockIn: '', clockOut: '', break: '', status: '' }
+    }));
+
+    startTransition(async () => {
+      for (const r of dayRecords) {
+        await deleteRecord(r.id);
+      }
+      router.refresh();
+    });
+  };
+
   const saveBreakEdit = () => {
     if (!editingCell) return;
     const { date } = editingCell;
@@ -671,15 +690,29 @@ export default function SummaryClient({
                           </div>
                         </div>
                       ) : (
-                        (() => {
-                          const parts: string[] = [];
-                          if (isLeave) parts.push(d.status);
-                          else if (d.status === "退勤済") parts.push("退勤済");
-                          // 振替出勤日のreason表示
-                          const ov = dayTypeOverrides[d.date];
-                          if (ov?.reason) parts.push(ov.reason);
-                          return parts.join(' / ') || '';
-                        })()
+                        <div style={{display:'flex', alignItems:'center', gap:4}}>
+                          <span style={{flex:1}}>
+                          {(() => {
+                            const parts: string[] = [];
+                            if (isLeave) parts.push(d.status);
+                            else if (d.status === "退勤済") parts.push("退勤済");
+                            const ov = dayTypeOverrides[d.date];
+                            if (ov?.reason) parts.push(ov.reason);
+                            return parts.join(' / ') || '';
+                          })()}
+                          </span>
+                          {canEdit && (records[d.date] || []).length > 0 && (
+                            <button
+                              className="no-print"
+                              onClick={(e) => { e.stopPropagation(); deleteDayRecords(d.date); }}
+                              disabled={isPending}
+                              style={{cursor:'pointer', background:'none', border:'none', color:'#bbb', padding:'2px 4px', display:'inline-flex', alignItems:'center', flexShrink:0}}
+                              title="この日のデータを全削除"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          )}
+                        </div>
                       )}
                     </td>
                   </tr>
