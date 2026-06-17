@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { updateUserRole, updateUserDepartment, addHoliday, deleteHoliday, syncJapaneseHolidays } from "@/app/actions";
+import { updateUserRole, updateUserDepartment, addHoliday, deleteHoliday, syncJapaneseHolidays, registerUser } from "@/app/actions";
 import { formatTime } from "@/lib/attendanceCalc";
 import { type DailySummary } from "@/lib/summaryCalc";
 import OvertimeHeatmap from "./overtime-heatmap";
@@ -79,7 +79,43 @@ export default function AdminClient({ todayData, allUsers, currentRole, currentD
   const [holidayDate, setHolidayDate] = useState("");
   const [holidayName, setHolidayName] = useState("");
 
+  // 新規ユーザー登録用の状態
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newEmail, setNewEmail] = useState("");
+  const [newEmpId, setNewEmpId] = useState("");
+  const [newDept, setNewDept] = useState(currentRole === "MANAGER" ? currentDepartment || "" : "");
+  const [newRole, setNewRole] = useState("USER");
+
   const isAdmin = currentRole === "ADMIN";
+
+  const handleRegisterUser = () => {
+    setFeedback(null);
+    if (!newEmail.trim() || !newName.trim()) {
+      setFeedback("エラー: 名前とメールアドレスは必須です");
+      return;
+    }
+    startTransition(async () => {
+      const result = await registerUser({
+        email: newEmail,
+        name: newName,
+        employeeId: newEmpId || null,
+        department: newDept || null,
+        role: newRole,
+      });
+      if (result.error) {
+        setFeedback(`エラー: ${result.error}`);
+      } else {
+        setFeedback("新規ユーザーを事前登録しました");
+        setNewEmail("");
+        setNewName("");
+        setNewEmpId("");
+        setNewDept(currentRole === "MANAGER" ? currentDepartment || "" : "");
+        setNewRole("USER");
+        setShowAddForm(false);
+      }
+    });
+  };
 
   const handleRoleChange = (userId: string, newRole: string) => {
     setFeedback(null);
@@ -217,14 +253,106 @@ export default function AdminClient({ todayData, allUsers, currentRole, currentD
       {/* ===== ユーザー管理タブ ===== */}
       {activeTab === "users" && (
         <div className="card animate-fade-in">
-          <h3 className="form-label text-lg mb-4">
-            ユーザー一覧とロール管理
-            {currentRole === "MANAGER" && currentDepartment && (
-              <span style={{ fontSize: 13, color: 'var(--google-text-sub)', fontWeight: 400, marginLeft: 12 }}>
-                （{currentDepartment}）
-              </span>
-            )}
-          </h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <h3 className="form-label text-lg" style={{ margin: 0 }}>
+              ユーザー一覧とロール管理
+              {currentRole === "MANAGER" && currentDepartment && (
+                <span style={{ fontSize: 13, color: 'var(--google-text-sub)', fontWeight: 400, marginLeft: 12 }}>
+                  （{currentDepartment}）
+                </span>
+              )}
+            </h3>
+            <button
+              className="btn-tonal"
+              onClick={() => setShowAddForm(!showAddForm)}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+            >
+              {showAddForm ? '✕ 閉じる' : '➕ 従業員を事前登録'}
+            </button>
+          </div>
+
+          {/* 新規登録フォーム */}
+          {showAddForm && (
+            <div style={{
+              background: '#F8F9FA',
+              border: '1px solid var(--google-border)',
+              borderRadius: 8,
+              padding: 16,
+              marginBottom: 16,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 12
+            }}>
+              <h4 style={{ margin: '0 0 4px 0', fontSize: 14, fontWeight: 700 }}>事前従業員登録</h4>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: '1 1 180px' }}>
+                  <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--google-text-sub)' }}>名前（必須）</label>
+                  <input
+                    type="text"
+                    value={newName}
+                    onChange={e => setNewName(e.target.value)}
+                    placeholder="山田 太郎"
+                    style={{ padding: '8px 12px', fontSize: 13, border: '1px solid #DADCE0', borderRadius: 8, outline: 'none' }}
+                  />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: '1 1 220px' }}>
+                  <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--google-text-sub)' }}>メールアドレス（ログイン用/必須）</label>
+                  <input
+                    type="email"
+                    value={newEmail}
+                    onChange={e => setNewEmail(e.target.value)}
+                    placeholder="yamada@example.com"
+                    style={{ padding: '8px 12px', fontSize: 13, border: '1px solid #DADCE0', borderRadius: 8, outline: 'none' }}
+                  />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: '1 1 120px' }}>
+                  <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--google-text-sub)' }}>社員番号（任意）</label>
+                  <input
+                    type="text"
+                    value={newEmpId}
+                    onChange={e => setNewEmpId(e.target.value)}
+                    placeholder="EMP001"
+                    style={{ padding: '8px 12px', fontSize: 13, border: '1px solid #DADCE0', borderRadius: 8, outline: 'none' }}
+                  />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: '1 1 120px' }}>
+                  <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--google-text-sub)' }}>部署（任意）</label>
+                  <input
+                    type="text"
+                    value={newDept}
+                    onChange={e => setNewDept(e.target.value)}
+                    disabled={currentRole === "MANAGER"}
+                    placeholder="開発部"
+                    style={{ padding: '8px 12px', fontSize: 13, border: '1px solid #DADCE0', borderRadius: 8, outline: 'none', backgroundColor: currentRole === "MANAGER" ? '#F1F3F4' : '#fff' }}
+                  />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: '1 1 120px' }}>
+                  <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--google-text-sub)' }}>権限</label>
+                  <select
+                    value={newRole}
+                    onChange={e => setNewRole(e.target.value)}
+                    disabled={currentRole === "MANAGER"}
+                    style={{ padding: '8px 12px', fontSize: 13, border: '1px solid #DADCE0', borderRadius: 8, outline: 'none', backgroundColor: currentRole === "MANAGER" ? '#F1F3F4' : '#fff' }}
+                  >
+                    <option value="USER">一般</option>
+                    {currentRole === "ADMIN" && <option value="MANAGER">管理者</option>}
+                    {currentRole === "ADMIN" && <option value="ADMIN">責任者</option>}
+                  </select>
+                </div>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 4 }}>
+                <button
+                  className="btn-primary"
+                  disabled={isPending || !newName.trim() || !newEmail.trim()}
+                  onClick={handleRegisterUser}
+                  style={{ padding: '8px 16px', fontSize: 13 }}
+                >
+                  登録する
+                </button>
+              </div>
+            </div>
+          )}
+
           <table className="data-table mt-4">
             <thead>
               <tr>

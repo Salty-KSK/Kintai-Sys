@@ -380,6 +380,85 @@ export async function updateUserDepartment(userId: string, department: string | 
 }
 
 // ----------------------------------------------------------------------------------
+// 従業員の事前登録（ADMINまたはMANAGERのみ）
+// ----------------------------------------------------------------------------------
+export async function registerUser(data: {
+  email: string;
+  name: string;
+  employeeId?: string | null;
+  department?: string | null;
+  role: string;
+}) {
+  const session = await getServerSession(authOptions);
+  if (!session || !session.user) return { error: "Not authenticated" };
+
+  const currentRole = (session.user as any).role;
+  const currentDept = (session.user as any).department;
+
+  // 権限チェック: ADMIN または MANAGER
+  if (currentRole !== "ADMIN" && currentRole !== "MANAGER") {
+    return { error: "Not authorized" };
+  }
+
+  // MANAGERの制限: 同一部署のUSERのみ登録可能
+  if (currentRole === "MANAGER") {
+    if (data.role !== "USER") {
+      return { error: "マネージャーは一般ユーザーのみ登録可能です" };
+    }
+    if (data.department !== currentDept) {
+      return { error: "マネージャーは自身の部署のユーザーのみ登録可能です" };
+    }
+  }
+
+  // バリデーション
+  if (!data.email.trim()) {
+    return { error: "メールアドレスは必須です" };
+  }
+  if (!data.name.trim()) {
+    return { error: "名前は必須です" };
+  }
+  if (!VALID_ROLES.includes(data.role)) {
+    return { error: "無効なロールです" };
+  }
+
+  try {
+    // メールアドレスの重複チェック
+    const existingUser = await prisma.user.findUnique({
+      where: { email: data.email.trim() }
+    });
+    if (existingUser) {
+      return { error: "このメールアドレスは既に登録されています" };
+    }
+
+    // 社員番号の重複チェック
+    if (data.employeeId?.trim()) {
+      const existingEmp = await prisma.user.findUnique({
+        where: { employeeId: data.employeeId.trim() }
+      });
+      if (existingEmp) {
+        return { error: "この社員番号は既に登録されています" };
+      }
+    }
+
+    await prisma.user.create({
+      data: {
+        email: data.email.trim(),
+        name: data.name.trim(),
+        employeeId: data.employeeId?.trim() || null,
+        department: data.department?.trim() || null,
+        role: data.role
+      }
+    });
+
+    revalidatePath("/admin");
+    return { success: true };
+  } catch (error) {
+    console.error(error);
+    return { error: "ユーザーの登録に失敗しました" };
+  }
+}
+
+// ----------------------------------------------------------------------------------
 // 祝日管理（ADMIN のみ）
 // ----------------------------------------------------------------------------------
 export async function addHoliday(dateStr: string, name: string) {
