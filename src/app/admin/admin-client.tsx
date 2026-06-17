@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { updateUser, addHoliday, deleteHoliday, syncJapaneseHolidays, registerUser } from "@/app/actions";
 import { formatTime } from "@/lib/attendanceCalc";
 import { type DailySummary } from "@/lib/summaryCalc";
@@ -78,6 +79,7 @@ export default function AdminClient({ todayData, allUsers, currentRole, currentU
   // 勤務状況タブ・残業管理タブでは自分自身を除外（取締役など勤怠不要のユーザー向け）
   const filteredTodayData = todayData.filter(u => u.id !== currentUserId);
   const filteredOvertimeEmployees = { ...overtimeData, employees: overtimeData.employees.filter(e => e.id !== currentUserId) };
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<"today" | "users" | "overtime" | "holidays">("today");
   const [isPending, startTransition] = useTransition();
   const [feedback, setFeedback] = useState<string | null>(null);
@@ -129,6 +131,7 @@ export default function AdminClient({ todayData, allUsers, currentRole, currentU
         setNewRole("USER");
         setNewPosition("");
         setShowAddForm(false);
+        router.refresh();
       }
     });
   };
@@ -149,6 +152,7 @@ export default function AdminClient({ todayData, allUsers, currentRole, currentU
       } else {
         setFeedback("ユーザー情報を更新しました");
         setEditingUser(null);
+        router.refresh();
       }
     });
   };
@@ -601,6 +605,7 @@ export default function AdminClient({ todayData, allUsers, currentRole, currentU
                     setFeedback(`エラー: ${result.error}`);
                   } else {
                     setFeedback(`祝日データを同期しました（${(result as any).count}件）`);
+                    router.refresh();
                   }
                 });
               }}
@@ -641,6 +646,7 @@ export default function AdminClient({ todayData, allUsers, currentRole, currentU
                     setFeedback(`エラー: ${result.error}`);
                   } else {
                     setFeedback('祝日を追加しました');
+                    router.refresh();
                     setHolidayDate('');
                     setHolidayName('');
                   }
@@ -681,6 +687,7 @@ export default function AdminClient({ todayData, allUsers, currentRole, currentU
                               setFeedback(`エラー: ${result.error}`);
                             } else {
                               setFeedback('祝日を削除しました');
+                              router.refresh();
                             }
                           });
                         }}
