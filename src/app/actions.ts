@@ -387,6 +387,7 @@ export async function registerUser(data: {
   name: string;
   employeeId?: string | null;
   department?: string | null;
+  position?: string | null;
   role: string;
 }) {
   const session = await getServerSession(authOptions);
@@ -446,6 +447,7 @@ export async function registerUser(data: {
         name: data.name.trim(),
         employeeId: data.employeeId?.trim() || null,
         department: data.department?.trim() || null,
+        position: data.position?.trim() || null,
         role: data.role
       }
     });
@@ -455,6 +457,67 @@ export async function registerUser(data: {
   } catch (error) {
     console.error(error);
     return { error: "ユーザーの登録に失敗しました" };
+  }
+}
+
+// ----------------------------------------------------------------------------------
+// ユーザー情報の編集（ADMINまたはMANAGERのみ）
+// ----------------------------------------------------------------------------------
+export async function updateUser(userId: string, data: {
+  name?: string;
+  department?: string | null;
+  position?: string | null;
+  role?: string;
+}) {
+  const session = await getServerSession(authOptions);
+  if (!session || !session.user) return { error: "Not authenticated" };
+
+  const currentRole = (session.user as any).role;
+  const currentUserId = (session.user as any).id;
+  const currentDept = (session.user as any).department;
+
+  if (currentRole !== "ADMIN" && currentRole !== "MANAGER") {
+    return { error: "Not authorized" };
+  }
+
+  // 自分自身のロール変更を防止
+  if (userId === currentUserId && data.role && data.role !== currentRole) {
+    return { error: "自分自身のロールは変更できません" };
+  }
+
+  // MANAGERの制限
+  if (currentRole === "MANAGER") {
+    if (data.role && data.role !== "USER") {
+      return { error: "マネージャーは一般ユーザーのみ設定可能です" };
+    }
+    const targetUser = await prisma.user.findUnique({
+      where: { id: userId }, select: { department: true }
+    });
+    if (!targetUser || targetUser.department !== currentDept) {
+      return { error: "権限がありません" };
+    }
+  }
+
+  if (data.role && !VALID_ROLES.includes(data.role)) {
+    return { error: "無効なロールです" };
+  }
+
+  try {
+    const updateData: any = {};
+    if (data.name !== undefined) updateData.name = data.name.trim() || null;
+    if (data.department !== undefined) updateData.department = data.department?.trim() || null;
+    if (data.position !== undefined) updateData.position = data.position?.trim() || null;
+    if (data.role !== undefined) updateData.role = data.role;
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: updateData
+    });
+    revalidatePath("/admin");
+    return { success: true };
+  } catch (error) {
+    console.error(error);
+    return { error: "ユーザー情報の更新に失敗しました" };
   }
 }
 

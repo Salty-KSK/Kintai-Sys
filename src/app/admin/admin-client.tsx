@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { updateUserRole, updateUserDepartment, addHoliday, deleteHoliday, syncJapaneseHolidays, registerUser } from "@/app/actions";
+import { updateUser, addHoliday, deleteHoliday, syncJapaneseHolidays, registerUser } from "@/app/actions";
 import { formatTime } from "@/lib/attendanceCalc";
 import { type DailySummary } from "@/lib/summaryCalc";
 import OvertimeHeatmap from "./overtime-heatmap";
@@ -24,6 +24,7 @@ type UserEntry = {
   email: string;
   role: string;
   department: string;
+  position: string;
 };
 
 type EmployeeOvertime = {
@@ -74,8 +75,6 @@ export default function AdminClient({ todayData, allUsers, currentRole, currentD
   const [activeTab, setActiveTab] = useState<"today" | "users" | "overtime" | "holidays">("today");
   const [isPending, startTransition] = useTransition();
   const [feedback, setFeedback] = useState<string | null>(null);
-  const [editingDept, setEditingDept] = useState<string | null>(null);
-  const [deptValue, setDeptValue] = useState("");
   const [holidayDate, setHolidayDate] = useState("");
   const [holidayName, setHolidayName] = useState("");
 
@@ -85,7 +84,15 @@ export default function AdminClient({ todayData, allUsers, currentRole, currentD
   const [newEmailLocal, setNewEmailLocal] = useState("");
   const [newEmpId, setNewEmpId] = useState("");
   const [newDept, setNewDept] = useState(currentRole === "MANAGER" ? currentDepartment || "本社" : "本社");
+  const [newPosition, setNewPosition] = useState("");
   const [newRole, setNewRole] = useState("USER");
+
+  // 編集用の状態
+  const [editingUser, setEditingUser] = useState<UserEntry | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editDept, setEditDept] = useState("");
+  const [editPosition, setEditPosition] = useState("");
+  const [editRole, setEditRole] = useState("");
 
   const isAdmin = currentRole === "ADMIN";
 
@@ -102,6 +109,7 @@ export default function AdminClient({ todayData, allUsers, currentRole, currentD
         employeeId: newEmpId || null,
         department: newDept || null,
         role: newRole,
+        position: newPosition.trim() || null,
       });
       if (result.error) {
         setFeedback(`エラー: ${result.error}`);
@@ -112,32 +120,27 @@ export default function AdminClient({ todayData, allUsers, currentRole, currentD
         setNewEmpId("");
         setNewDept(currentRole === "MANAGER" ? currentDepartment || "本社" : "本社");
         setNewRole("USER");
+        setNewPosition("");
         setShowAddForm(false);
       }
     });
   };
 
-  const handleRoleChange = (userId: string, newRole: string) => {
+  const handleUpdateUser = () => {
+    if (!editingUser) return;
     setFeedback(null);
     startTransition(async () => {
-      const result = await updateUserRole(userId, newRole);
+      const result = await updateUser(editingUser.id, {
+        name: editName.trim(),
+        department: editDept || null,
+        position: editPosition.trim() || null,
+        role: editRole,
+      });
       if (result.error) {
         setFeedback(`エラー: ${result.error}`);
       } else {
-        setFeedback("ロールを更新しました（次回ページ読み込みで反映）");
-      }
-    });
-  };
-
-  const handleDeptSave = (userId: string) => {
-    setFeedback(null);
-    startTransition(async () => {
-      const result = await updateUserDepartment(userId, deptValue.trim() || null);
-      if (result.error) {
-        setFeedback(`エラー: ${result.error}`);
-      } else {
-        setFeedback("部署を更新しました");
-        setEditingDept(null);
+        setFeedback("ユーザー情報を更新しました");
+        setEditingUser(null);
       }
     });
   };
@@ -340,6 +343,17 @@ export default function AdminClient({ todayData, allUsers, currentRole, currentD
                     <option value="工事第3課">工事第3課</option>
                   </select>
                 </div>
+                {/* 役職フィールドの追加 */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: '1 1 120px' }}>
+                  <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--google-text-sub)' }}>役職（任意）</label>
+                  <input
+                    type="text"
+                    value={newPosition}
+                    onChange={e => setNewPosition(e.target.value)}
+                    placeholder="課長"
+                    style={{ padding: '8px 12px', fontSize: 13, border: '1px solid #DADCE0', borderRadius: 8, outline: 'none' }}
+                  />
+                </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: '1 1 120px' }}>
                   <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--google-text-sub)' }}>権限</label>
                   <select
@@ -373,69 +387,25 @@ export default function AdminClient({ todayData, allUsers, currentRole, currentD
                 <th>名前</th>
                 <th>メールアドレス</th>
                 <th>部署</th>
+                <th>役職</th>
                 <th>ロール</th>
-                <th>操作</th>
+                <th style={{ width: 80 }}>編集</th>
               </tr>
             </thead>
             <tbody>
               {allUsers.map((user) => {
                 const roleStyle = ROLE_COLORS[user.role] || ROLE_COLORS.USER;
-                const roleOptions = getRoleOptions(user.role);
-                const isEditingThisDept = editingDept === user.id;
+                const canEdit = currentRole === "ADMIN" || currentRole === "MANAGER";
 
                 return (
                   <tr key={user.id}>
                     <td style={{ fontWeight: 'bold' }}>{user.name}</td>
                     <td style={{ fontSize: 13 }}>{user.email}</td>
-                    <td>
-                      {isAdmin ? (
-                        isEditingThisDept ? (
-                          <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                            <input
-                              type="text"
-                              value={deptValue}
-                              onChange={(e) => setDeptValue(e.target.value)}
-                              placeholder="部署名"
-                              style={{
-                                padding: '4px 8px', fontSize: 13, border: '1px solid #DADCE0',
-                                borderRadius: 6, width: 100, outline: 'none',
-                              }}
-                              autoFocus
-                              onKeyDown={(e) => { if (e.key === 'Enter') handleDeptSave(user.id); }}
-                            />
-                            <button
-                              onClick={() => handleDeptSave(user.id)}
-                              disabled={isPending}
-                              style={{
-                                padding: '4px 8px', fontSize: 12, backgroundColor: '#1A73E8',
-                                color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer',
-                              }}
-                            >✓</button>
-                            <button
-                              onClick={() => setEditingDept(null)}
-                              style={{
-                                padding: '4px 8px', fontSize: 12, backgroundColor: '#F0F4F9',
-                                color: '#5F6368', border: 'none', borderRadius: 6, cursor: 'pointer',
-                              }}
-                            >✕</button>
-                          </div>
-                        ) : (
-                          <span
-                            onClick={() => { setEditingDept(user.id); setDeptValue(user.department || ''); }}
-                            style={{
-                              cursor: 'pointer', fontSize: 13, color: user.department ? 'inherit' : '#9AA0A6',
-                              borderBottom: '1px dashed #DADCE0', paddingBottom: 1,
-                            }}
-                            title="クリックして部署を編集"
-                          >
-                            {user.department || '未設定'}
-                          </span>
-                        )
-                      ) : (
-                        <span style={{ fontSize: 13, color: user.department ? 'inherit' : '#9AA0A6' }}>
-                          {user.department || '—'}
-                        </span>
-                      )}
+                    <td style={{ fontSize: 13, color: user.department ? 'inherit' : '#9AA0A6' }}>
+                      {user.department || '—'}
+                    </td>
+                    <td style={{ fontSize: 13, color: user.position ? 'inherit' : '#9AA0A6' }}>
+                      {user.position || '—'}
                     </td>
                     <td>
                       <span
@@ -448,23 +418,24 @@ export default function AdminClient({ todayData, allUsers, currentRole, currentD
                       </span>
                     </td>
                     <td>
-                      <select
-                        value={user.role}
-                        onChange={(e) => handleRoleChange(user.id, e.target.value)}
-                        disabled={isPending}
-                        style={{
-                          padding: '6px 12px', fontSize: 13, border: '1px solid #DADCE0',
-                          borderRadius: 8, backgroundColor: '#fff', cursor: 'pointer', outline: 'none',
-                        }}
-                      >
-                        {/* 現在のロールは必ず選択肢に含める */}
-                        {!roleOptions.includes(user.role) && (
-                          <option value={user.role}>{ROLE_LABELS[user.role] || user.role}</option>
-                        )}
-                        {roleOptions.map((r) => (
-                          <option key={r} value={r}>{ROLE_LABELS[r]}</option>
-                        ))}
-                      </select>
+                      {canEdit && (
+                        <button
+                          onClick={() => {
+                            setEditingUser(user);
+                            setEditName(user.name);
+                            setEditDept(user.department || "");
+                            setEditPosition(user.position || "");
+                            setEditRole(user.role);
+                          }}
+                          className="btn-tonal"
+                          style={{
+                            padding: '4px 8px', fontSize: 12, borderRadius: 6, cursor: 'pointer',
+                            backgroundColor: '#F1F3F4', color: '#3C4043', border: '1px solid #DADCE0'
+                          }}
+                        >
+                          編集
+                        </button>
+                      )}
                     </td>
                   </tr>
                 );
@@ -472,13 +443,97 @@ export default function AdminClient({ todayData, allUsers, currentRole, currentD
 
               {allUsers.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="text-center text-muted" style={{ padding: '24px 0' }}>
+                  <td colSpan={6} className="text-center text-muted" style={{ padding: '24px 0' }}>
                     ユーザーがいません
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
+
+          {/* ユーザー編集モーダル */}
+          {editingUser && (
+            <div style={{
+              position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.4)', display: 'flex',
+              alignItems: 'center', justifyContent: 'center', zIndex: 1000
+            }}>
+              <div className="card" style={{ width: '100%', maxWidth: '480px', margin: '16px', padding: '24px', position: 'relative' }}>
+                <h3 style={{ margin: '0 0 16px 0', fontSize: 16, fontWeight: 600 }}>ユーザー情報を編集</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--google-text-sub)' }}>名前</label>
+                    <input
+                      type="text"
+                      value={editName}
+                      onChange={e => setEditName(e.target.value)}
+                      placeholder="名前"
+                      style={{ padding: '8px 12px', fontSize: 13, border: '1px solid #DADCE0', borderRadius: 8, outline: 'none' }}
+                    />
+                  </div>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--google-text-sub)' }}>部署</label>
+                    <select
+                      value={editDept}
+                      onChange={e => setEditDept(e.target.value)}
+                      disabled={currentRole === "MANAGER"}
+                      style={{ padding: '8px 12px', fontSize: 13, border: '1px solid #DADCE0', borderRadius: 8, outline: 'none', backgroundColor: currentRole === "MANAGER" ? '#F1F3F4' : '#fff' }}
+                    >
+                      <option value="">未設定</option>
+                      <option value="本社">本社</option>
+                      <option value="工事第1課">工事第1課</option>
+                      <option value="工事第2課">工事第2課</option>
+                      <option value="工事第3課">工事第3課</option>
+                    </select>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--google-text-sub)' }}>役職</label>
+                    <input
+                      type="text"
+                      value={editPosition}
+                      onChange={e => setEditPosition(e.target.value)}
+                      placeholder="役職名"
+                      style={{ padding: '8px 12px', fontSize: 13, border: '1px solid #DADCE0', borderRadius: 8, outline: 'none' }}
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--google-text-sub)' }}>権限</label>
+                    <select
+                      value={editRole}
+                      onChange={e => setEditRole(e.target.value)}
+                      disabled={currentRole === "MANAGER"}
+                      style={{ padding: '8px 12px', fontSize: 13, border: '1px solid #DADCE0', borderRadius: 8, outline: 'none', backgroundColor: currentRole === "MANAGER" ? '#F1F3F4' : '#fff' }}
+                    >
+                      <option value="USER">一般</option>
+                      {currentRole === "ADMIN" && <option value="MANAGER">管理者</option>}
+                      {currentRole === "ADMIN" && <option value="ADMIN">責任者</option>}
+                    </select>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 24 }}>
+                  <button
+                    onClick={() => setEditingUser(null)}
+                    className="btn-tonal"
+                    style={{ padding: '8px 16px', fontSize: 13, borderRadius: 8, cursor: 'pointer', backgroundColor: '#F1F3F4', color: '#3C4043', border: '1px solid #DADCE0' }}
+                  >
+                    キャンセル
+                  </button>
+                  <button
+                    onClick={handleUpdateUser}
+                    disabled={isPending || !editName.trim()}
+                    className="btn-primary"
+                    style={{ padding: '8px 16px', fontSize: 13, borderRadius: 8, cursor: 'pointer' }}
+                  >
+                    保存
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
