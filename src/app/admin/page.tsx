@@ -21,6 +21,7 @@ export default async function AdminPage() {
 
   const currentRole = (session.user as any).role;
   const currentDept = (session.user as any).department;
+  const currentUserId = (session.user as any).id as string;
 
   // 管理者権限チェック（MANAGER or ADMIN）
   if (currentRole !== "ADMIN" && currentRole !== "MANAGER") {
@@ -263,6 +264,7 @@ export default async function AdminPage() {
         todayData={todayData}
         allUsers={serializedUsers}
         currentRole={currentRole}
+        currentUserId={currentUserId}
         currentDepartment={currentDept || ''}
         overtimeData={overtimeData}
         holidays={serializedHolidays}

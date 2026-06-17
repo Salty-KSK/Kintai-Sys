@@ -54,6 +54,7 @@ type Props = {
   todayData: TodayEntry[];
   allUsers: UserEntry[];
   currentRole: string;
+  currentUserId: string;
   currentDepartment: string;
   overtimeData: OvertimeData;
   holidays: HolidayEntry[];
@@ -71,7 +72,9 @@ const ROLE_COLORS: Record<string, { bg: string; color: string }> = {
   ADMIN: { bg: "#D3E3FD", color: "#1A73E8" },
 };
 
-export default function AdminClient({ todayData, allUsers, currentRole, currentDepartment, overtimeData, holidays }: Props) {
+export default function AdminClient({ todayData, allUsers, currentRole, currentUserId, currentDepartment, overtimeData, holidays }: Props) {
+  // 自分自身を一覧から除外（取締役など勤怠不要のユーザー向け）
+  const filteredUsers = allUsers.filter(u => u.id !== currentUserId);
   const [activeTab, setActiveTab] = useState<"today" | "users" | "overtime" | "holidays">("today");
   const [isPending, startTransition] = useTransition();
   const [feedback, setFeedback] = useState<string | null>(null);
@@ -393,7 +396,7 @@ export default function AdminClient({ todayData, allUsers, currentRole, currentD
               </tr>
             </thead>
             <tbody>
-              {allUsers.map((user) => {
+              {filteredUsers.map((user) => {
                 const roleStyle = ROLE_COLORS[user.role] || ROLE_COLORS.USER;
                 const canEdit = currentRole === "ADMIN" || currentRole === "MANAGER";
 
@@ -427,12 +430,18 @@ export default function AdminClient({ todayData, allUsers, currentRole, currentD
                             setEditPosition(user.position || "");
                             setEditRole(user.role);
                           }}
-                          className="btn-tonal"
                           style={{
-                            padding: '4px 8px', fontSize: 12, borderRadius: 6, cursor: 'pointer',
-                            backgroundColor: '#F1F3F4', color: '#3C4043', border: '1px solid #DADCE0'
+                            display: 'inline-flex', alignItems: 'center', gap: 4,
+                            padding: '5px 12px', fontSize: 12, fontWeight: 500,
+                            borderRadius: 16, cursor: 'pointer',
+                            backgroundColor: 'transparent', color: '#1A73E8',
+                            border: '1px solid #DADCE0',
+                            transition: 'all 0.15s ease',
                           }}
+                          onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#E8F0FE'; e.currentTarget.style.borderColor = '#1A73E8'; }}
+                          onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.borderColor = '#DADCE0'; }}
                         >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                           編集
                         </button>
                       )}
@@ -441,7 +450,7 @@ export default function AdminClient({ todayData, allUsers, currentRole, currentD
                 );
               })}
 
-              {allUsers.length === 0 && (
+              {filteredUsers.length === 0 && (
                 <tr>
                   <td colSpan={6} className="text-center text-muted" style={{ padding: '24px 0' }}>
                     ユーザーがいません
@@ -517,16 +526,27 @@ export default function AdminClient({ todayData, allUsers, currentRole, currentD
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 24 }}>
                   <button
                     onClick={() => setEditingUser(null)}
-                    className="btn-tonal"
-                    style={{ padding: '8px 16px', fontSize: 13, borderRadius: 8, cursor: 'pointer', backgroundColor: '#F1F3F4', color: '#3C4043', border: '1px solid #DADCE0' }}
+                    style={{
+                      padding: '8px 20px', fontSize: 13, fontWeight: 500, borderRadius: 20,
+                      cursor: 'pointer', backgroundColor: 'transparent', color: '#5F6368',
+                      border: '1px solid #DADCE0', transition: 'all 0.15s ease',
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#F1F3F4'; }}
+                    onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; }}
                   >
                     キャンセル
                   </button>
                   <button
                     onClick={handleUpdateUser}
                     disabled={isPending || !editName.trim()}
-                    className="btn-primary"
-                    style={{ padding: '8px 16px', fontSize: 13, borderRadius: 8, cursor: 'pointer' }}
+                    style={{
+                      padding: '8px 20px', fontSize: 13, fontWeight: 500, borderRadius: 20,
+                      cursor: 'pointer', backgroundColor: '#1A73E8', color: '#fff',
+                      border: 'none', transition: 'all 0.15s ease',
+                      opacity: (isPending || !editName.trim()) ? 0.5 : 1,
+                    }}
+                    onMouseEnter={e => { if (!e.currentTarget.disabled) e.currentTarget.style.backgroundColor = '#1557B0'; }}
+                    onMouseLeave={e => { e.currentTarget.style.backgroundColor = '#1A73E8'; }}
                   >
                     保存
                   </button>
