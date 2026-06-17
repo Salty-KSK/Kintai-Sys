@@ -221,14 +221,10 @@ export async function setDailyStatus(dateStr: string, statusType: string | null,
   try {
     const userId = targetUserId || (session.user as any).id;
     
-    // JSTビジネスデーの境界を算出
-    const base = new Date(new Date(dateStr).getTime() + 9 * 60 * 60 * 1000);
-    if (base.getUTCHours() < 5) base.setUTCDate(base.getUTCDate() - 1);
-    const yyyy = base.getUTCFullYear();
-    const mm = base.getUTCMonth();
-    const dd = base.getUTCDate();
-    const startOfDay = new Date(Date.UTC(yyyy, mm, dd, 5 - 9, 0, 0, 0));
-    const endOfDay = new Date(Date.UTC(yyyy, mm, dd + 1, 4 - 9, 59, 59, 999));
+    // 日付を明示的にパース（YYYY/MM/DD or YYYY-MM-DD）
+    const [yyyy, mm, dd] = dateStr.split(/[-\/]/).map(Number);
+    const startOfDay = new Date(Date.UTC(yyyy, mm - 1, dd, 5 - 9, 0, 0, 0));    // JST 05:00
+    const endOfDay = new Date(Date.UTC(yyyy, mm - 1, dd + 1, 4 - 9, 59, 59, 999)); // JST 翌04:59
 
     // 既存のステータスレコード（STATUS_から始まるもの）を検索して削除
     const existingStatuses = await prisma.attendanceRecord.findMany({
@@ -428,7 +424,7 @@ export async function setDayTypeOverride(dateStr: string, dayType: string | null
 
   try {
     const [yyyy, mm, dd] = dateStr.split(/[-\/]/).map(Number);
-    const date = new Date(Date.UTC(yyyy, mm - 1, dd, 0, 0, 0, 0));
+    const date = new Date(Date.UTC(yyyy, mm - 1, dd, 3, 0, 0, 0)); // JST正午 = UTC 03:00
     const targetUserId = userId || null;
 
     // 既存を削除
@@ -466,7 +462,8 @@ export async function setFurikyuWithOverride(
   try {
     // 1. 振替休日の日にステータスを設定
     const [fy, fm, fd] = furikyuDateStr.split(/[-\/]/).map(Number);
-    const furikyuDate = new Date(Date.UTC(fy, fm - 1, fd, 0, 0, 0, 0));
+    // JST正午(12:00) = UTC 03:00 に設定（ビジネスデー境界の中央で確実に正しい日に割り当て）
+    const furikyuDate = new Date(Date.UTC(fy, fm - 1, fd, 3, 0, 0, 0));
     
     // 既存のSTATUS_レコードを削除してから新規作成
     const fStart = new Date(Date.UTC(fy, fm - 1, fd, 5 - 9, 0, 0, 0));
@@ -491,7 +488,8 @@ export async function setFurikyuWithOverride(
 
     // 2. 振替出勤日のdayTypeをweekdayに変更（対象ユーザーのみ）
     const [wy, wm, wd] = workDateStr.split(/[-\/]/).map(Number);
-    const workDate = new Date(Date.UTC(wy, wm - 1, wd, 0, 0, 0, 0));
+    // JST正午(12:00) = UTC 03:00
+    const workDate = new Date(Date.UTC(wy, wm - 1, wd, 3, 0, 0, 0));
     
     await prisma.dayTypeOverride.deleteMany({ where: { date: workDate, userId } });
     await prisma.dayTypeOverride.create({

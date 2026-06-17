@@ -254,8 +254,6 @@ export function calculateDailySummary(
   // 0時境界での曜日切り替え計算
   // ========================================================================
   const MIDNIGHT = 24 * 60; // 1440分 = 24:00
-  const NIGHT_START = 22 * 60; // 1320分 = 22:00
-  const NIGHT_END = 29 * 60; // 1740分 = 翌5:00
 
   // 勤務時間を0時で2セグメントに分割
   // セグメント1: 当日分（inMin 〜 min(outMin, 24:00)）
@@ -284,27 +282,34 @@ export function calculateDailySummary(
   let holidaySunMin = 0, holidaySunNightMin = 0;
 
   // --- セグメント1: 当日のdayTypeで計算 ---
-  classifySegment(dayType, seg1Net, seg1EffNight);
+  classifySegment(dayType, seg1Net, seg1EffNight, false);
 
   // --- セグメント2: 翌日のdayTypeで計算（0時以降） ---
   if (seg2Net > 0) {
-    classifySegment(effectiveNextDayType, seg2Net, seg2EffNight);
+    // 休日→平日の切り替わりなら、翌日セグメントは残業扱い（連続勤務のため）
+    const isOvertimeCarry = dayType !== "weekday" && effectiveNextDayType === "weekday";
+    classifySegment(effectiveNextDayType, seg2Net, seg2EffNight, isOvertimeCarry);
   }
 
-  function classifySegment(type: DayType, workMin: number, nightMin: number) {
+  function classifySegment(type: DayType, workMin: number, nightMin: number, forceOvertime: boolean) {
     if (type === "weekday") {
-      // 平日: 所定8h / 残業
-      const currentWeekdayTotal = regularMinutes + overtimeMinutes;
-      const remaining8h = Math.max(0, 480 - currentWeekdayTotal);
-      const regPart = Math.min(workMin, remaining8h);
-      const otPart = workMin - regPart;
-      regularMinutes += regPart;
-      overtimeMinutes += otPart;
-      // 深夜は所定内か残業かで分類
-      if (otPart > 0) {
+      if (forceOvertime) {
+        // 休日→平日の連続勤務: 全て残業
+        overtimeMinutes += workMin;
         nightOvertimeMin += nightMin;
       } else {
-        nightRegularMin += nightMin;
+        // 通常の平日: 所定8h / 残業
+        const currentWeekdayTotal = regularMinutes + overtimeMinutes;
+        const remaining8h = Math.max(0, 480 - currentWeekdayTotal);
+        const regPart = Math.min(workMin, remaining8h);
+        const otPart = workMin - regPart;
+        regularMinutes += regPart;
+        overtimeMinutes += otPart;
+        if (otPart > 0) {
+          nightOvertimeMin += nightMin;
+        } else {
+          nightRegularMin += nightMin;
+        }
       }
     } else if (type === "saturday" || type === "holiday") {
       // 法定外休日（土曜 or 祝日）
