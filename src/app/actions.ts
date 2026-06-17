@@ -467,6 +467,7 @@ export async function updateUser(userId: string, data: {
   name?: string;
   department?: string | null;
   position?: string | null;
+  employeeId?: string | null;
   role?: string;
 }) {
   const session = await getServerSession(authOptions);
@@ -507,6 +508,7 @@ export async function updateUser(userId: string, data: {
     if (data.name !== undefined) updateData.name = data.name.trim() || null;
     if (data.department !== undefined) updateData.department = data.department?.trim() || null;
     if (data.position !== undefined) updateData.position = data.position?.trim() || null;
+    if (data.employeeId !== undefined) updateData.employeeId = data.employeeId?.trim() || null;
     if (data.role !== undefined) updateData.role = data.role;
 
     await prisma.user.update({

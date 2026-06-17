@@ -96,6 +96,7 @@ export default async function AdminPage() {
       role: true,
       department: true,
       position: true,
+      employeeId: true,
     },
     orderBy: { name: 'asc' }
   });
@@ -108,6 +109,7 @@ export default async function AdminPage() {
     role: String(u.role || 'USER'),
     department: u.department || '',
     position: u.position || '',
+    employeeId: u.employeeId || '',
   }));
 
   // ===== 残業ヒートマップ用データ =====

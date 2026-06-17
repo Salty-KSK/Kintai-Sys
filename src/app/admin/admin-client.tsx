@@ -25,6 +25,7 @@ type UserEntry = {
   role: string;
   department: string;
   position: string;
+  employeeId: string;
 };
 
 type EmployeeOvertime = {
@@ -94,6 +95,7 @@ export default function AdminClient({ todayData, allUsers, currentRole, currentU
   // 編集用の状態
   const [editingUser, setEditingUser] = useState<UserEntry | null>(null);
   const [editName, setEditName] = useState("");
+  const [editEmpId, setEditEmpId] = useState("");
   const [editDept, setEditDept] = useState("");
   const [editPosition, setEditPosition] = useState("");
   const [editRole, setEditRole] = useState("");
@@ -136,6 +138,7 @@ export default function AdminClient({ todayData, allUsers, currentRole, currentU
     startTransition(async () => {
       const result = await updateUser(editingUser.id, {
         name: editName.trim(),
+        employeeId: editEmpId.trim() || null,
         department: editDept || null,
         position: editPosition.trim() || null,
         role: editRole,
@@ -389,6 +392,7 @@ export default function AdminClient({ todayData, allUsers, currentRole, currentU
             <thead>
               <tr>
                 <th>名前</th>
+                <th>社員番号</th>
                 <th>メールアドレス</th>
                 <th>部署</th>
                 <th>役職</th>
@@ -404,6 +408,9 @@ export default function AdminClient({ todayData, allUsers, currentRole, currentU
                 return (
                   <tr key={user.id}>
                     <td style={{ fontWeight: 'bold' }}>{user.name}</td>
+                    <td style={{ fontSize: 13, color: user.employeeId ? 'inherit' : '#9AA0A6' }}>
+                      {user.employeeId || '—'}
+                    </td>
                     <td style={{ fontSize: 13 }}>{user.email}</td>
                     <td style={{ fontSize: 13, color: user.department ? 'inherit' : '#9AA0A6' }}>
                       {user.department || '—'}
@@ -427,6 +434,7 @@ export default function AdminClient({ todayData, allUsers, currentRole, currentU
                           onClick={() => {
                             setEditingUser(user);
                             setEditName(user.name);
+                            setEditEmpId(user.employeeId || "");
                             setEditDept(user.department || "");
                             setEditPosition(user.position || "");
                             setEditRole(user.role);
@@ -453,7 +461,7 @@ export default function AdminClient({ todayData, allUsers, currentRole, currentU
 
               {allUsers.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="text-center text-muted" style={{ padding: '24px 0' }}>
+                  <td colSpan={7} className="text-center text-muted" style={{ padding: '24px 0' }}>
                     ユーザーがいません
                   </td>
                 </tr>
@@ -478,6 +486,17 @@ export default function AdminClient({ todayData, allUsers, currentRole, currentU
                       value={editName}
                       onChange={e => setEditName(e.target.value)}
                       placeholder="名前"
+                      style={{ padding: '8px 12px', fontSize: 13, border: '1px solid #DADCE0', borderRadius: 8, outline: 'none' }}
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--google-text-sub)' }}>社員番号</label>
+                    <input
+                      type="text"
+                      value={editEmpId}
+                      onChange={e => setEditEmpId(e.target.value)}
+                      placeholder="EMP001"
                       style={{ padding: '8px 12px', fontSize: 13, border: '1px solid #DADCE0', borderRadius: 8, outline: 'none' }}
                     />
                   </div>
