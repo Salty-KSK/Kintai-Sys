@@ -6,6 +6,7 @@ import { updateUser, addHoliday, deleteHoliday, syncJapaneseHolidays, registerUs
 import { formatTime } from "@/lib/attendanceCalc";
 import { type DailySummary } from "@/lib/summaryCalc";
 import OvertimeHeatmap from "./overtime-heatmap";
+import { UserPlus, X, RefreshCw } from "lucide-react";
 
 type TodayEntry = {
   id: string;
@@ -290,7 +291,7 @@ export default function AdminClient({ todayData, allUsers, currentRole, currentU
                 color: showAddForm ? '#5F6368' : '#1A73E8',
               }}
             >
-              {showAddForm ? '✕ 閉じる' : '➕ 従業員を事前登録'}
+              {showAddForm ? <><X size={14} /> 閉じる</> : <><UserPlus size={14} /> 従業員を事前登録</>}
             </button>
           </div>
 
@@ -610,7 +611,7 @@ export default function AdminClient({ todayData, allUsers, currentRole, currentU
                 });
               }}
             >
-              {isPending ? '同期中...' : '🔄 祝日を一括取得'}
+              {isPending ? '同期中...' : <><RefreshCw size={14} /> 祝日を一括取得</>}
             </button>
           </div>
 
