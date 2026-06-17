@@ -61,6 +61,17 @@ export async function addRecord(
       newTimestamp = new Date(Date.UTC(yyyy, mm - 1, dd, hours - 9, minutes, 0, 0));
     }
 
+    // そのビジネスデーの同タイプの既存レコードを全削除（重複防止）
+    const dayStart = new Date(Date.UTC(yyyy, mm - 1, dd, 5 - 9, 0, 0, 0));
+    const dayEnd = new Date(Date.UTC(yyyy, mm - 1, dd + 1, 12 - 9, 59, 59, 999));
+    await prisma.attendanceRecord.deleteMany({
+      where: {
+        userId,
+        type,
+        timestamp: { gte: dayStart, lte: dayEnd }
+      }
+    });
+
     await prisma.attendanceRecord.create({
       data: {
         userId,
@@ -136,9 +147,25 @@ export async function updateRecordTime(id: string, newTimeStr: string, businessD
       newTimestamp = new Date(Date.UTC(yyyy, mm, dd, hours - 9, minutes, 0, 0));
     }
 
-    await prisma.attendanceRecord.update({
-      where: { id },
-      data: { timestamp: newTimestamp }
+    // そのビジネスデーの同タイプの既存レコードを全削除してから新規作成
+    // （重複レコードがあっても確実にクリーンになる）
+    const dayStart = new Date(Date.UTC(yyyy, mm, dd, 5 - 9, 0, 0, 0));
+    const dayEnd = new Date(Date.UTC(yyyy, mm, dd + 1, 12 - 9, 59, 59, 999)); // 翌12:59 JST
+
+    await prisma.attendanceRecord.deleteMany({
+      where: {
+        userId: record.userId,
+        type: record.type,
+        timestamp: { gte: dayStart, lte: dayEnd }
+      }
+    });
+
+    await prisma.attendanceRecord.create({
+      data: {
+        userId: record.userId,
+        type: record.type,
+        timestamp: newTimestamp,
+      }
     });
     
     // スプレッドシートへ同期送信（バックグラウンド実行・待たない）
