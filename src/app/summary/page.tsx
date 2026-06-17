@@ -75,10 +75,14 @@ export default async function SummaryPage({
   });
   const holidayDates = holidays.map(h => h.date);
 
-  // 勤務種別オーバーライド取得
+  // 勤務種別オーバーライド取得（対象ユーザー + グローバル）
   const dayTypeOverrides = await prisma.dayTypeOverride.findMany({
     where: {
-      date: { gte: startUTC, lte: endUTC }
+      date: { gte: startUTC, lte: endUTC },
+      OR: [
+        { userId: selectedUserId },
+        { userId: null }
+      ]
     }
   });
 
@@ -103,13 +107,14 @@ export default async function SummaryPage({
     });
     dayRecords.forEach(r => assignedIds.add(r.id));
 
-    // その日のオーバーライドを検索
-    const override = dayTypeOverrides.find(o => {
+    // その日のオーバーライドを検索（ユーザー固有 > グローバルの優先順）
+    const dayOverrides = dayTypeOverrides.filter(o => {
       const od = new Date(o.date);
       return od.getFullYear() === date.getFullYear() &&
              od.getMonth() === date.getMonth() &&
              od.getDate() === date.getDate();
     });
+    const override = dayOverrides.find(o => o.userId === selectedUserId) || dayOverrides.find(o => !o.userId);
 
     return calculateDailySummary(date, dayRecords, holidayDates, override?.dayType as any || null);
   });

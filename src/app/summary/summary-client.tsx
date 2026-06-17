@@ -221,7 +221,7 @@ export default function SummaryClient({
     const newDayType = editDayType || null;
     setEditingCell(null);
     startTransition(async () => {
-      await setDayTypeOverride(date, newDayType);
+      await setDayTypeOverride(date, newDayType, undefined, viewingUserId);
       router.refresh();
     });
   };
