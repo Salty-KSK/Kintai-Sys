@@ -520,6 +520,7 @@ export default function SummaryClient({
                                 <div style={{fontSize:9, color:'#E65100', lineHeight:1.1, whiteSpace:'nowrap'}}>{dayTypeOverrides[d.date].reason}</div>
                               )}
                             </div>
+                          )}
                         </td>
                       );
                     })()}
@@ -669,7 +670,15 @@ export default function SummaryClient({
                           </div>
                         </div>
                       ) : (
-                        isLeave ? d.status : (d.status === "退勤済" ? "退勤済" : "")
+                        (() => {
+                          const parts: string[] = [];
+                          if (isLeave) parts.push(d.status);
+                          else if (d.status === "退勤済") parts.push("退勤済");
+                          // 振替出勤日のreason表示
+                          const ov = dayTypeOverrides[d.date];
+                          if (ov?.reason) parts.push(ov.reason);
+                          return parts.join(' / ') || '';
+                        })()
                       )}
                     </td>
                   </tr>

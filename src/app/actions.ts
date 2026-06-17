@@ -521,6 +521,8 @@ export async function setFurikyuWithOverride(
       if (old.note) {
         const match = old.note.match(/(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
         if (match) {
+          const [, oyS, omS, odS] = match;
+          const [oy, om, od] = [Number(oyS), Number(omS), Number(odS)];
           const oldDateStart = new Date(Date.UTC(oy, om - 1, od, 0, 0, 0, 0));
           const oldDateEnd = new Date(Date.UTC(oy, om - 1, od, 23, 59, 59, 999));
           await prisma.dayTypeOverride.deleteMany({ where: { date: { gte: oldDateStart, lte: oldDateEnd }, userId } });

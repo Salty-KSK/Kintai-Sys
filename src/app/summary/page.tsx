@@ -7,7 +7,8 @@ import {
   generateDateRange,
   calculateDailySummary,
   calculateMonthlySummary,
-  type DailySummary
+  type DailySummary,
+  type DayType
 } from "@/lib/summaryCalc";
 
 export default async function SummaryPage({
