@@ -293,56 +293,52 @@ export default function AdminClient({ todayData, allUsers, currentRole, currentU
               background: '#F8F9FA',
               border: '1px solid var(--google-border)',
               borderRadius: 8,
-              padding: 16,
+              padding: '12px 16px',
               marginBottom: 16,
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 12
             }}>
-              <h4 style={{ margin: '0 0 4px 0', fontSize: 14, fontWeight: 700 }}>事前従業員登録</h4>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: '1 1 180px' }}>
-                  <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--google-text-sub)' }}>名前（必須）</label>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 2, flex: '1 1 110px', minWidth: 0 }}>
+                  <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--google-text-sub)' }}>名前 *</label>
                   <input
                     type="text"
                     value={newName}
                     onChange={e => setNewName(e.target.value)}
                     placeholder="山田 太郎"
-                    style={{ padding: '8px 12px', fontSize: 13, border: '1px solid #DADCE0', borderRadius: 8, outline: 'none' }}
+                    style={{ padding: '6px 8px', fontSize: 12, border: '1px solid #DADCE0', borderRadius: 6, outline: 'none', width: '100%' }}
                   />
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: '1 1 240px' }}>
-                  <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--google-text-sub)' }}>メールアドレス（必須）</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 2, flex: '1 1 160px', minWidth: 0 }}>
+                  <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--google-text-sub)' }}>メール *</label>
                   <div style={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
                     <input
                       type="text"
                       value={newEmailLocal}
                       onChange={e => setNewEmailLocal(e.target.value)}
                       placeholder="yamada"
-                      style={{ padding: '8px 12px', fontSize: 13, border: '1px solid #DADCE0', borderRadius: 8, outline: 'none', width: '100%', paddingRight: '120px' }}
+                      style={{ padding: '6px 8px', fontSize: 12, border: '1px solid #DADCE0', borderRadius: 6, outline: 'none', width: '100%', paddingRight: '100px' }}
                     />
-                    <span style={{ fontSize: 12, color: 'var(--google-text-sub)', position: 'absolute', right: 12, pointerEvents: 'none' }}>
+                    <span style={{ fontSize: 10, color: 'var(--google-text-sub)', position: 'absolute', right: 8, pointerEvents: 'none' }}>
                       @palsekkei.co.jp
                     </span>
                   </div>
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: '1 1 120px' }}>
-                  <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--google-text-sub)' }}>社員番号（任意）</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 2, flex: '0 1 80px', minWidth: 0 }}>
+                  <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--google-text-sub)' }}>社員番号</label>
                   <input
                     type="text"
                     value={newEmpId}
                     onChange={e => setNewEmpId(e.target.value)}
-                    placeholder="EMP001"
-                    style={{ padding: '8px 12px', fontSize: 13, border: '1px solid #DADCE0', borderRadius: 8, outline: 'none' }}
+                    placeholder="001"
+                    style={{ padding: '6px 8px', fontSize: 12, border: '1px solid #DADCE0', borderRadius: 6, outline: 'none', width: '100%' }}
                   />
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: '1 1 140px' }}>
-                  <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--google-text-sub)' }}>部署</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 2, flex: '0 1 90px', minWidth: 0 }}>
+                  <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--google-text-sub)' }}>部署</label>
                   <select
                     value={newDept}
                     onChange={e => setNewDept(e.target.value)}
                     disabled={currentRole === "MANAGER"}
-                    style={{ padding: '8px 12px', fontSize: 13, border: '1px solid #DADCE0', borderRadius: 8, outline: 'none', backgroundColor: currentRole === "MANAGER" ? '#F1F3F4' : '#fff', cursor: currentRole === "MANAGER" ? 'default' : 'pointer' }}
+                    style={{ padding: '6px 8px', fontSize: 12, border: '1px solid #DADCE0', borderRadius: 6, outline: 'none', backgroundColor: currentRole === "MANAGER" ? '#F1F3F4' : '#fff', width: '100%' }}
                   >
                     <option value="本社">本社</option>
                     <option value="工事第1課">工事第1課</option>
@@ -350,45 +346,43 @@ export default function AdminClient({ todayData, allUsers, currentRole, currentU
                     <option value="工事第3課">工事第3課</option>
                   </select>
                 </div>
-                {/* 役職フィールドの追加 */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: '1 1 120px' }}>
-                  <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--google-text-sub)' }}>役職（任意）</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 2, flex: '0 1 70px', minWidth: 0 }}>
+                  <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--google-text-sub)' }}>役職</label>
                   <input
                     type="text"
                     value={newPosition}
                     onChange={e => setNewPosition(e.target.value)}
                     placeholder="課長"
-                    style={{ padding: '8px 12px', fontSize: 13, border: '1px solid #DADCE0', borderRadius: 8, outline: 'none' }}
+                    style={{ padding: '6px 8px', fontSize: 12, border: '1px solid #DADCE0', borderRadius: 6, outline: 'none', width: '100%' }}
                   />
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: '1 1 120px' }}>
-                  <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--google-text-sub)' }}>権限</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 2, flex: '0 1 70px', minWidth: 0 }}>
+                  <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--google-text-sub)' }}>権限</label>
                   <select
                     value={newRole}
                     onChange={e => setNewRole(e.target.value)}
                     disabled={currentRole === "MANAGER"}
-                    style={{ padding: '8px 12px', fontSize: 13, border: '1px solid #DADCE0', borderRadius: 8, outline: 'none', backgroundColor: currentRole === "MANAGER" ? '#F1F3F4' : '#fff' }}
+                    style={{ padding: '6px 8px', fontSize: 12, border: '1px solid #DADCE0', borderRadius: 6, outline: 'none', backgroundColor: currentRole === "MANAGER" ? '#F1F3F4' : '#fff', width: '100%' }}
                   >
                     <option value="USER">一般</option>
                     {currentRole === "ADMIN" && <option value="MANAGER">管理者</option>}
                     {currentRole === "ADMIN" && <option value="ADMIN">責任者</option>}
                   </select>
                 </div>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 4 }}>
                 <button
                   disabled={isPending || !newName.trim() || !newEmailLocal.trim()}
                   onClick={handleRegisterUser}
                   style={{
-                    padding: '8px 20px', fontSize: 13, fontWeight: 500, borderRadius: 20,
+                    padding: '6px 16px', fontSize: 12, fontWeight: 500, borderRadius: 20,
                     cursor: 'pointer', backgroundColor: '#1A73E8', color: '#fff',
-                    border: 'none', transition: 'all 0.15s ease',
+                    border: 'none', transition: 'all 0.15s ease', whiteSpace: 'nowrap',
                     opacity: (isPending || !newName.trim() || !newEmailLocal.trim()) ? 0.5 : 1,
+                    alignSelf: 'flex-end',
                   }}
                   onMouseEnter={e => { if (!e.currentTarget.disabled) e.currentTarget.style.backgroundColor = '#1557B0'; }}
                   onMouseLeave={e => { e.currentTarget.style.backgroundColor = '#1A73E8'; }}
                 >
-                  登録する
+                  登録
                 </button>
               </div>
             </div>
