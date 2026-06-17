@@ -442,3 +442,61 @@ export async function setDayTypeOverride(dateStr: string, dayType: string | null
     return { error: "Failed to set day type override" };
   }
 }
+
+// ----------------------------------------------------------------------------------
+// 振替休日の連動設定（管理者のみ）
+// 休む日にSTATUS_FURIKYUを設定 + 出勤日のdayTypeをweekdayに変更
+// ----------------------------------------------------------------------------------
+export async function setFurikyuWithOverride(
+  furikyuDateStr: string,  // 振替休日を取る日
+  workDateStr: string,     // 振替出勤する日（土曜・祝日）
+  userId: string
+) {
+  const session = await getServerSession(authOptions);
+  if (!session || !session.user) return { error: "Not authenticated" };
+  const role = (session.user as any).role;
+  if (role !== "ADMIN" && role !== "MANAGER") return { error: "Not authorized" };
+
+  try {
+    // 1. 振替休日の日にステータスを設定
+    const [fy, fm, fd] = furikyuDateStr.split(/[-\/]/).map(Number);
+    const furikyuDate = new Date(Date.UTC(fy, fm - 1, fd, 0, 0, 0, 0));
+    
+    // 既存のSTATUS_レコードを削除してから新規作成
+    const fStart = new Date(Date.UTC(fy, fm - 1, fd, 5 - 9, 0, 0, 0));
+    const fEnd = new Date(Date.UTC(fy, fm - 1, fd + 1, 4 - 9, 59, 59, 999));
+    
+    await prisma.attendanceRecord.deleteMany({
+      where: {
+        userId,
+        type: { startsWith: "STATUS_" },
+        timestamp: { gte: fStart, lte: fEnd }
+      }
+    });
+    
+    await prisma.attendanceRecord.create({
+      data: {
+        userId,
+        type: "STATUS_FURIKYU",
+        timestamp: furikyuDate,
+        note: `振替出勤日: ${workDateStr}`
+      }
+    });
+
+    // 2. 振替出勤日のdayTypeをweekdayに変更
+    const [wy, wm, wd] = workDateStr.split(/[-\/]/).map(Number);
+    const workDate = new Date(Date.UTC(wy, wm - 1, wd, 0, 0, 0, 0));
+    
+    await prisma.dayTypeOverride.upsert({
+      where: { date: workDate },
+      update: { dayType: "weekday", reason: `振替休日: ${furikyuDateStr}` },
+      create: { date: workDate, dayType: "weekday", reason: `振替休日: ${furikyuDateStr}` }
+    });
+
+    revalidatePath("/summary");
+    return { success: true };
+  } catch (error) {
+    console.error(error);
+    return { error: "振替休日の設定に失敗しました" };
+  }
+}

@@ -55,10 +55,10 @@ export type MonthlySummary = {
 const DOW_NAMES = ["日", "月", "火", "水", "木", "金", "土"];
 
 /**
- * 15分単位で繰り上げ（CEILING）
+ * 30分単位で繰り上げ（CEILING）
  */
-export function ceilTo15(minutes: number): number {
-  return Math.ceil(minutes / 15) * 15;
+export function ceilTo30(minutes: number): number {
+  return Math.ceil(minutes / 30) * 30;
 }
 
 /**
@@ -222,9 +222,9 @@ export function calculateDailySummary(
   const rawOut = fmtJSTTime(coDate);
 
   // 15分繰り上げ
-  const inMin = ceilTo15(getJSTMinutes(ciDate));
+  const inMin = ceilTo30(getJSTMinutes(ciDate));
   const outMinRaw = getJSTMinutes(coDate);
-  let outMin = ceilTo15(outMinRaw);
+  let outMin = ceilTo30(outMinRaw);
   // 日跨ぎ対応
   if (outMin < inMin) outMin += 24 * 60;
 
@@ -342,5 +342,5 @@ function fmtJSTTime(d: Date): string {
 
 function fmtJSTTime15(d: Date): string {
   const min = getJSTMinutes(d);
-  return fmtMin(ceilTo15(min));
+  return fmtMin(ceilTo30(min));
 }
