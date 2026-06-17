@@ -44,7 +44,6 @@ export default function SummaryClient({
   records, canEdit, viewingUserId, sessionUserId, dayTypeOverrides
 }: Props) {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
   const [editingCell, setEditingCell] = useState<{ date: string; field: 'clockIn' | 'clockOut' | 'break' | 'status' | 'dayType' } | null>(null);
   const [editH, setEditH] = useState('');
   const [editM, setEditM] = useState('');
@@ -69,12 +68,12 @@ export default function SummaryClient({
   }, [dailySummaries]);
 
   const navigate = (userId?: string, y?: number, m?: number) => {
-    setLoading(true);
     const u = userId || selectedUser.id;
     const yr = y || year;
     const mo = m || month;
-    router.push(`/summary?user=${u}&year=${yr}&month=${mo}`);
-    setTimeout(() => setLoading(false), 500);
+    startTransition(() => {
+      router.push(`/summary?user=${u}&year=${yr}&month=${mo}`);
+    });
   };
 
   const prevMonth = () => {
@@ -86,6 +85,11 @@ export default function SummaryClient({
     const m2 = month === 12 ? 1 : month + 1;
     const y2 = month === 12 ? year + 1 : year;
     navigate(undefined, y2, m2);
+  };
+  const handleMonthSelect = (value: string) => {
+    // value: "YYYY-MM"
+    const [y, m] = value.split('-').map(Number);
+    if (y && m) navigate(undefined, y, m);
   };
 
   const handlePrint = () => {
@@ -291,7 +295,7 @@ export default function SummaryClient({
 
   return (
     <div className="container animate-fade-in" style={{ maxWidth: "100%", padding: "16px" }}>
-      {loading && <div className="loading-overlay"><div className="loading-spinner" /></div>}
+      {isPending && <div className="loading-overlay"><div className="loading-spinner" /></div>}
 
       {/* 印刷用ヘッダー（画面では非表示） */}
       <div className="print-header">
@@ -323,11 +327,21 @@ export default function SummaryClient({
             )}
           </div>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <button className="btn-tonal" onClick={prevMonth} style={{ padding: "6px 14px", borderRadius: 20, minWidth: 0 }}>◀</button>
-            <span style={{ fontSize: 16, fontWeight: 700, minWidth: 120, textAlign: "center" }}>
-              {year}年{month}月
-            </span>
-            <button className="btn-tonal" onClick={nextMonth} style={{ padding: "6px 14px", borderRadius: 20, minWidth: 0 }}>▶</button>
+            <button className="btn-tonal" onClick={prevMonth} disabled={isPending} style={{ padding: "6px 14px", borderRadius: 20, minWidth: 0, opacity: isPending ? 0.5 : 1 }}>◀</button>
+            <input
+              type="month"
+              value={`${year}-${String(month).padStart(2, '0')}`}
+              onChange={(e) => handleMonthSelect(e.target.value)}
+              disabled={isPending}
+              style={{
+                fontSize: 15, fontWeight: 700, textAlign: "center", minWidth: 140,
+                padding: "6px 8px", border: "1px solid #DADCE0", borderRadius: 8,
+                outline: "none", cursor: "pointer", backgroundColor: "#fff",
+                opacity: isPending ? 0.5 : 1,
+              }}
+            />
+            <button className="btn-tonal" onClick={nextMonth} disabled={isPending} style={{ padding: "6px 14px", borderRadius: 20, minWidth: 0, opacity: isPending ? 0.5 : 1 }}>▶</button>
+            {isPending && <span style={{ fontSize: 12, color: '#1A73E8', marginLeft: 4 }}>読込中...</span>}
           </div>
           <div style={{ minWidth: 180, display: "flex", justifyContent: "flex-end" }}>
             <button
