@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { updateUserRole, updateUserDepartment } from "@/app/actions";
+import { updateUserRole, updateUserDepartment, addHoliday, deleteHoliday, syncJapaneseHolidays } from "@/app/actions";
 import { formatTime } from "@/lib/attendanceCalc";
 import { type DailySummary } from "@/lib/summaryCalc";
 import OvertimeHeatmap from "./overtime-heatmap";
@@ -43,12 +43,19 @@ type OvertimeData = {
   employees: EmployeeOvertime[];
 };
 
+type HolidayEntry = {
+  id: string;
+  date: string;
+  name: string;
+};
+
 type Props = {
   todayData: TodayEntry[];
   allUsers: UserEntry[];
   currentRole: string;
   currentDepartment: string;
   overtimeData: OvertimeData;
+  holidays: HolidayEntry[];
 };
 
 const ROLE_LABELS: Record<string, string> = {
@@ -63,12 +70,14 @@ const ROLE_COLORS: Record<string, { bg: string; color: string }> = {
   ADMIN: { bg: "#D3E3FD", color: "#1A73E8" },
 };
 
-export default function AdminClient({ todayData, allUsers, currentRole, currentDepartment, overtimeData }: Props) {
-  const [activeTab, setActiveTab] = useState<"today" | "users" | "overtime">("today");
+export default function AdminClient({ todayData, allUsers, currentRole, currentDepartment, overtimeData, holidays }: Props) {
+  const [activeTab, setActiveTab] = useState<"today" | "users" | "overtime" | "holidays">("today");
   const [isPending, startTransition] = useTransition();
   const [feedback, setFeedback] = useState<string | null>(null);
   const [editingDept, setEditingDept] = useState<string | null>(null);
   const [deptValue, setDeptValue] = useState("");
+  const [holidayDate, setHolidayDate] = useState("");
+  const [holidayName, setHolidayName] = useState("");
 
   const isAdmin = currentRole === "ADMIN";
 
@@ -130,6 +139,15 @@ export default function AdminClient({ todayData, allUsers, currentRole, currentD
         >
           残業管理
         </button>
+        {isAdmin && (
+          <button
+            className={`btn-tonal ${activeTab === "holidays" ? "" : "btn-tonal-inactive"}`}
+            style={activeTab === "holidays" ? { backgroundColor: 'var(--google-active-pill)' } : { backgroundColor: 'transparent', color: 'var(--google-text-sub)' }}
+            onClick={() => setActiveTab("holidays")}
+          >
+            祝日管理
+          </button>
+        )}
       </div>
 
       {/* フィードバックメッセージ */}
@@ -325,6 +343,125 @@ export default function AdminClient({ todayData, allUsers, currentRole, currentD
       {/* ===== 残業管理タブ ===== */}
       {activeTab === "overtime" && (
         <OvertimeHeatmap overtimeData={overtimeData} />
+      )}
+
+      {/* ===== 祝日管理タブ ===== */}
+      {activeTab === "holidays" && isAdmin && (
+        <div className="card animate-fade-in">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <h3 className="form-label text-lg" style={{ margin: 0 }}>祝日一覧</h3>
+            <button
+              className="btn-tonal"
+              disabled={isPending}
+              onClick={() => {
+                setFeedback(null);
+                startTransition(async () => {
+                  const result = await syncJapaneseHolidays();
+                  if (result.error) {
+                    setFeedback(`エラー: ${result.error}`);
+                  } else {
+                    setFeedback(`祝日データを同期しました（${(result as any).count}件）`);
+                  }
+                });
+              }}
+            >
+              {isPending ? '同期中...' : '🔄 祝日を一括取得'}
+            </button>
+          </div>
+
+          {/* 手動追加フォーム */}
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 16, flexWrap: 'wrap' }}>
+            <input
+              type="date"
+              value={holidayDate}
+              onChange={(e) => setHolidayDate(e.target.value)}
+              style={{
+                padding: '8px 12px', fontSize: 14, border: '1px solid #DADCE0',
+                borderRadius: 8, outline: 'none',
+              }}
+            />
+            <input
+              type="text"
+              value={holidayName}
+              onChange={(e) => setHolidayName(e.target.value)}
+              placeholder="祝日名を入力"
+              style={{
+                padding: '8px 12px', fontSize: 14, border: '1px solid #DADCE0',
+                borderRadius: 8, outline: 'none', minWidth: 180,
+              }}
+            />
+            <button
+              className="btn-primary"
+              disabled={isPending || !holidayDate || !holidayName}
+              onClick={() => {
+                setFeedback(null);
+                startTransition(async () => {
+                  const result = await addHoliday(holidayDate, holidayName);
+                  if (result.error) {
+                    setFeedback(`エラー: ${result.error}`);
+                  } else {
+                    setFeedback('祝日を追加しました');
+                    setHolidayDate('');
+                    setHolidayName('');
+                  }
+                });
+              }}
+            >
+              追加
+            </button>
+          </div>
+
+          {/* 祝日一覧テーブル */}
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>日付</th>
+                <th>祝日名</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              {holidays.map((h) => {
+                const d = new Date(h.date);
+                const dateStr = `${d.getUTCFullYear()}/${(d.getUTCMonth()+1).toString().padStart(2,'0')}/${d.getUTCDate().toString().padStart(2,'0')}`;
+                return (
+                  <tr key={h.id}>
+                    <td>{dateStr}</td>
+                    <td>{h.name}</td>
+                    <td>
+                      <button
+                        className="btn-tonal"
+                        style={{ fontSize: 12, padding: '4px 12px', color: 'var(--danger)' }}
+                        disabled={isPending}
+                        onClick={() => {
+                          setFeedback(null);
+                          startTransition(async () => {
+                            const result = await deleteHoliday(h.id);
+                            if (result.error) {
+                              setFeedback(`エラー: ${result.error}`);
+                            } else {
+                              setFeedback('祝日を削除しました');
+                            }
+                          });
+                        }}
+                      >
+                        削除
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+
+              {holidays.length === 0 && (
+                <tr>
+                  <td colSpan={3} className="text-center text-muted" style={{ padding: '24px 0' }}>
+                    祝日が登録されていません。「祝日を一括取得」ボタンで日本の祝日を取得できます。
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       )}
     </>
   );

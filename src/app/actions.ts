@@ -338,3 +338,107 @@ export async function updateUserDepartment(userId: string, department: string | 
     return { error: "Failed to update department" };
   }
 }
+
+// ----------------------------------------------------------------------------------
+// 祝日管理（ADMIN のみ）
+// ----------------------------------------------------------------------------------
+export async function addHoliday(dateStr: string, name: string) {
+  const session = await getServerSession(authOptions);
+  if (!session || !session.user) return { error: "Not authenticated" };
+  if ((session.user as any).role !== "ADMIN") return { error: "Not authorized" };
+
+  try {
+    const date = new Date(dateStr + "T00:00:00Z");
+    await prisma.holiday.create({
+      data: { date, name }
+    });
+    revalidatePath("/admin");
+    revalidatePath("/summary");
+    return { success: true };
+  } catch (error: any) {
+    if (error?.code === 'P2002') return { error: "この日付は既に登録されています" };
+    return { error: "Failed to add holiday" };
+  }
+}
+
+export async function deleteHoliday(id: string) {
+  const session = await getServerSession(authOptions);
+  if (!session || !session.user) return { error: "Not authenticated" };
+  if ((session.user as any).role !== "ADMIN") return { error: "Not authorized" };
+
+  try {
+    await prisma.holiday.delete({ where: { id } });
+    revalidatePath("/admin");
+    revalidatePath("/summary");
+    return { success: true };
+  } catch (error) {
+    return { error: "Failed to delete holiday" };
+  }
+}
+
+export async function syncJapaneseHolidays() {
+  const session = await getServerSession(authOptions);
+  if (!session || !session.user) return { error: "Not authenticated" };
+  if ((session.user as any).role !== "ADMIN") return { error: "Not authorized" };
+
+  try {
+    const res = await fetch("https://holidays-jp.github.io/api/v1/date.json");
+    if (!res.ok) return { error: "祝日データの取得に失敗しました" };
+    const data: Record<string, string> = await res.json();
+
+    let added = 0;
+    for (const [dateStr, name] of Object.entries(data)) {
+      const date = new Date(dateStr + "T00:00:00Z");
+      try {
+        await prisma.holiday.upsert({
+          where: { date },
+          update: { name },
+          create: { date, name }
+        });
+        added++;
+      } catch (e) {
+        // skip duplicates
+      }
+    }
+
+    revalidatePath("/admin");
+    revalidatePath("/summary");
+    return { success: true, count: added };
+  } catch (error) {
+    console.error(error);
+    return { error: "祝日データの同期に失敗しました" };
+  }
+}
+
+// ----------------------------------------------------------------------------------
+// 勤務種別のオーバーライド（管理者のみ）
+// ----------------------------------------------------------------------------------
+export async function setDayTypeOverride(dateStr: string, dayType: string | null, reason?: string) {
+  const session = await getServerSession(authOptions);
+  if (!session || !session.user) return { error: "Not authenticated" };
+  const role = (session.user as any).role;
+  if (role !== "ADMIN" && role !== "MANAGER") return { error: "Not authorized" };
+
+  try {
+    // dateStrは "YYYY/MM/DD" または "YYYY-MM-DD" 形式
+    const [yyyy, mm, dd] = dateStr.split(/[-\/]/).map(Number);
+    const date = new Date(Date.UTC(yyyy, mm - 1, dd, 0, 0, 0, 0));
+
+    if (!dayType) {
+      // オーバーライドを削除（自動判定に戻す）
+      await prisma.dayTypeOverride.deleteMany({ where: { date } });
+    } else {
+      await prisma.dayTypeOverride.upsert({
+        where: { date },
+        update: { dayType, reason: reason || null },
+        create: { date, dayType, reason: reason || null }
+      });
+    }
+
+    revalidatePath("/summary");
+    return { success: true };
+  } catch (error) {
+    console.error(error);
+    return { error: "Failed to set day type override" };
+  }
+}

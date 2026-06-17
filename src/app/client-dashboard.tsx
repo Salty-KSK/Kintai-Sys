@@ -272,7 +272,7 @@ export default function ClientDashboard({ initialRecords, availableRestDays = []
                           className="input-field"
                           style={{ padding: '0.2rem', width: 'auto', fontSize: '1.25rem', fontWeight: 'bold' }}
                         >
-                          {Array.from({ length: 60 }).map((_, i) => {
+                          {[0, 15, 30, 45].map(i => {
                             const v = i.toString().padStart(2, '0');
                             return <option key={v} value={v}>{v}</option>;
                           })}

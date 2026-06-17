@@ -57,7 +57,7 @@ export default async function SummaryPage({
 
   // 打刻データ取得
   const startUTC = new Date(Date.UTC(startDate.getFullYear(), startDate.getMonth(), startDate.getDate(), -9, 0, 0));
-  const endUTC = new Date(Date.UTC(endDate.getFullYear(), endDate.getMonth(), endDate.getDate(), 14, 59, 59));
+  const endUTC = new Date(Date.UTC(endDate.getFullYear(), endDate.getMonth(), endDate.getDate() + 1, 4 - 9, 59, 59, 999));
 
   const records = await prisma.attendanceRecord.findMany({
     where: {
@@ -75,6 +75,13 @@ export default async function SummaryPage({
   });
   const holidayDates = holidays.map(h => h.date);
 
+  // 勤務種別オーバーライド取得
+  const dayTypeOverrides = await prisma.dayTypeOverride.findMany({
+    where: {
+      date: { gte: startUTC, lte: endUTC }
+    }
+  });
+
   // 日別集計
   const dailySummaries: DailySummary[] = dates.map(date => {
     // その日のJSTビジネスデー境界
@@ -87,7 +94,15 @@ export default async function SummaryPage({
       return t >= dayStart && t <= dayEnd;
     });
 
-    return calculateDailySummary(date, dayRecords, holidayDates);
+    // その日のオーバーライドを検索
+    const override = dayTypeOverrides.find(o => {
+      const od = new Date(o.date);
+      return od.getFullYear() === date.getFullYear() &&
+             od.getMonth() === date.getMonth() &&
+             od.getDate() === date.getDate();
+    });
+
+    return calculateDailySummary(date, dayRecords, holidayDates, override?.dayType as any || null);
   });
 
   // 月間サマリー
@@ -131,6 +146,12 @@ export default async function SummaryPage({
           note: (r as any).note ?? null
         }))];
       })
+    ),
+    dayTypeOverrides: Object.fromEntries(
+      dayTypeOverrides.map(o => [
+        `${new Date(o.date).getFullYear()}/${(new Date(o.date).getMonth()+1).toString().padStart(2,'0')}/${new Date(o.date).getDate().toString().padStart(2,'0')}`,
+        { dayType: o.dayType, reason: o.reason || '' }
+      ])
     ),
     canEdit: (session.user as any).id === selectedUserId || canViewOthers,
     viewingUserId: selectedUserId,

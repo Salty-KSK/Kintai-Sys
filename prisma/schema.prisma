@@ -76,3 +76,13 @@ model Holiday {
   date DateTime @unique
   name String
 }
+
+model DayTypeOverride {
+  id        String   @id @default(cuid())
+  date      DateTime
+  dayType   String   // "weekday" | "saturday" | "sunday" | "holiday"
+  reason    String?  // 変更理由（例: "振替出勤"）
+  createdAt DateTime @default(now())
+
+  @@unique([date])
+}

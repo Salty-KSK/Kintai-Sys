@@ -98,7 +98,7 @@ function calcNightMinutes(inMin: number, outMin: number): number {
 export function getBusinessPeriod(year: number, month: number): { start: Date; end: Date } {
   // month は 1-indexed (4 = April)
   const start = new Date(Date.UTC(year, month - 2, 26, -9, 0, 0)); // 前月26日 JST
-  const end = new Date(Date.UTC(year, month - 1, 25, 14, 59, 59)); // 当月25日 23:59 JST
+  const end = new Date(Date.UTC(year, month - 1, 26, 4 - 9, 59, 59, 999)); // 当月25日 翌04:59 JST
   return { start, end };
 }
 
@@ -125,7 +125,8 @@ export function generateDateRange(year: number, month: number): Date[] {
 export function calculateDailySummary(
   date: Date,
   records: { type: string; timestamp: Date | string; breakMinutes?: number | null; note?: string | null }[],
-  holidays: Date[]
+  holidays: Date[],
+  dayTypeOverride?: DayType | null
 ): DailySummary {
   const dow = date.getDay();
   const dateStr = `${date.getFullYear()}/${(date.getMonth() + 1).toString().padStart(2, "0")}/${date.getDate().toString().padStart(2, "0")}`;
@@ -143,6 +144,11 @@ export function calculateDailySummary(
   if (dow === 0) dayType = "sunday";
   else if (dow === 6) dayType = "saturday";
   if (isHoliday && dayType === "weekday") dayType = "holiday";
+
+  // 管理者によるオーバーライドがあれば適用
+  if (dayTypeOverride) {
+    dayType = dayTypeOverride;
+  }
 
   // ステータスレコード確認
   const statusRecord = records.find(r => r.type.startsWith("STATUS_"));

@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition, useRef, useEffect } from "react";
 import type { DailySummary, MonthlySummary } from "@/lib/summaryCalc";
 import { FileDown } from "lucide-react";
-import { updateRecordTime, deleteRecord, updateBreakTime, setDailyStatus, addRecord } from "@/app/actions";
+import { updateRecordTime, deleteRecord, updateBreakTime, setDailyStatus, addRecord, setDayTypeOverride } from "@/app/actions";
 import OvertimeHeatmap from "@/app/admin/overtime-heatmap";
 
 type RecordItem = { id: string; type: string; timestamp: string; breakMinutes: number | null; note: string | null };
@@ -22,6 +22,7 @@ type Props = {
   canEdit: boolean;
   viewingUserId: string;
   sessionUserId: string;
+  dayTypeOverrides: Record<string, { dayType: string; reason: string }>;
 };
 
 function fmt(min: number): string {
@@ -40,15 +41,16 @@ function fmtTotal(min: number): string {
 
 export default function SummaryClient({
   dailySummaries, monthlySummary, selectedUser, allUsers, year, month, isAdmin, periodStr,
-  records, canEdit, viewingUserId, sessionUserId
+  records, canEdit, viewingUserId, sessionUserId, dayTypeOverrides
 }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [editingCell, setEditingCell] = useState<{ date: string; field: 'clockIn' | 'clockOut' | 'break' | 'status' } | null>(null);
+  const [editingCell, setEditingCell] = useState<{ date: string; field: 'clockIn' | 'clockOut' | 'break' | 'status' | 'dayType' } | null>(null);
   const [editH, setEditH] = useState('');
   const [editM, setEditM] = useState('');
   const [editBreak, setEditBreak] = useState<string>('auto');
   const [editStatus, setEditStatus] = useState<string>('');
+  const [editDayType, setEditDayType] = useState<string>('');
   const [editNote, setEditNote] = useState('');
   const [isPending, startTransition] = useTransition();
   const [activeTab, setActiveTab] = useState<'summary' | 'overtime'>('summary');
@@ -178,6 +180,24 @@ export default function SummaryClient({
     startTransition(async () => {
       await setDailyStatus(date, statusType, note, viewingUserId);
       setEditingCell(null);
+      router.refresh();
+    });
+  };
+
+  const startDayTypeEdit = (d: DailySummary) => {
+    if (!canEdit) return;
+    const override = dayTypeOverrides[d.date];
+    setEditDayType(override?.dayType || '');
+    setEditingCell({ date: d.date, field: 'dayType' });
+  };
+
+  const saveDayTypeEdit = () => {
+    if (!editingCell) return;
+    const { date } = editingCell;
+    const newDayType = editDayType || null;
+    setEditingCell(null);
+    startTransition(async () => {
+      await setDayTypeOverride(date, newDayType);
       router.refresh();
     });
   };
@@ -423,7 +443,37 @@ export default function SummaryClient({
                 return (
                   <tr key={i} className={rowClass}>
                     <td>{d.date.slice(5)}</td>
-                    <td className={dowClass}>{d.dayOfWeek}</td>
+                    {(() => {
+                      const isEditingDayType = editingCell?.date === d.date && editingCell.field === 'dayType';
+                      const hasOverride = !!dayTypeOverrides[d.date];
+                      return (
+                        <td 
+                          className={dowClass}
+                          onClick={() => !isEditingDayType && canEdit && startDayTypeEdit(d)}
+                          style={{ 
+                            cursor: canEdit && !isEditingDayType ? 'pointer' : 'default',
+                            position: 'relative',
+                            backgroundColor: hasOverride ? '#FFF3E0' : undefined
+                          }}
+                        >
+                          {isEditingDayType ? (
+                            <div className="no-print" style={{display:'flex', gap:2, alignItems:'center'}}>
+                              <select value={editDayType} onChange={e => setEditDayType(e.target.value)} style={{width:70, fontSize:11, padding:'2px'}}>
+                                <option value="">自動</option>
+                                <option value="weekday">平日</option>
+                                <option value="saturday">法定外</option>
+                                <option value="sunday">法定</option>
+                                <option value="holiday">祝日</option>
+                              </select>
+                              <button onClick={saveDayTypeEdit} disabled={isPending} style={{fontSize:18, cursor:'pointer', background:'none', border:'none', color:'#34A853', padding:'2px 6px'}}>✔</button>
+                              <button onClick={() => setEditingCell(null)} style={{fontSize:18, cursor:'pointer', background:'none', border:'none', color:'var(--danger)', padding:'2px 6px'}}>✖</button>
+                            </div>
+                          ) : (
+                            <>{d.dayOfWeek}{hasOverride ? '*' : ''}</>
+                          )}
+                        </td>
+                      );
+                    })()}
 
                     {/* 出勤セル */}
                     <td
@@ -438,7 +488,7 @@ export default function SummaryClient({
                             ))}
                           </select>:
                           <select value={editM} onChange={e => setEditM(e.target.value)} style={{width:45, fontSize:11, padding:'2px'}}>
-                            {Array.from({length:60}, (_, i) => i).map(m => (
+                            {[0, 15, 30, 45].map(m => (
                               <option key={m} value={m}>{m.toString().padStart(2,'0')}</option>
                             ))}
                           </select>
@@ -463,7 +513,7 @@ export default function SummaryClient({
                             ))}
                           </select>:
                           <select value={editM} onChange={e => setEditM(e.target.value)} style={{width:45, fontSize:11, padding:'2px'}}>
-                            {Array.from({length:60}, (_, i) => i).map(m => (
+                            {[0, 15, 30, 45].map(m => (
                               <option key={m} value={m}>{m.toString().padStart(2,'0')}</option>
                             ))}
                           </select>

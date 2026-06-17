@@ -119,7 +119,7 @@ export default async function AdminPage() {
   periodEnd.setHours(23, 59, 59, 999);
 
   const startUTC = new Date(Date.UTC(periodStart.getFullYear(), periodStart.getMonth(), periodStart.getDate(), -9, 0, 0));
-  const endUTC = new Date(Date.UTC(periodEnd.getFullYear(), periodEnd.getMonth(), periodEnd.getDate(), 14, 59, 59));
+  const endUTC = new Date(Date.UTC(periodEnd.getFullYear(), periodEnd.getMonth(), periodEnd.getDate() + 1, 4 - 9, 59, 59, 999));
 
   // 対象ユーザー一覧を取得
   const overtimeUsers = await prisma.user.findMany({
@@ -247,6 +247,14 @@ export default async function AdminPage() {
     employees: employeesData,
   };
 
+  // 祝日一覧取得（祝日管理タブ用）
+  const allHolidays = await prisma.holiday.findMany({ orderBy: { date: 'asc' } });
+  const serializedHolidays = allHolidays.map(h => ({
+    id: h.id,
+    date: h.date.toISOString(),
+    name: h.name,
+  }));
+
   return (
     <div className="container animate-fade-in">
       <AdminClient
@@ -255,6 +263,7 @@ export default async function AdminPage() {
         currentRole={currentRole}
         currentDepartment={currentDept || ''}
         overtimeData={overtimeData}
+        holidays={serializedHolidays}
       />
     </div>
   );
