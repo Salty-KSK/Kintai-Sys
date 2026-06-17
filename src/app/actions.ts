@@ -262,7 +262,16 @@ export async function setDailyStatus(dateStr: string, statusType: string | null,
       }
     });
 
+    // 振替休日が設定されていた場合、関連するDayTypeOverrideも削除
     for (const record of existingStatuses) {
+      if (record.type === "STATUS_FURIKYU" && record.note) {
+        const match = record.note.match(/(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+        if (match) {
+          const [, oy, om, od] = match.map(Number);
+          const oldWorkDate = new Date(Date.UTC(oy, om - 1, od, 3, 0, 0, 0));
+          await prisma.dayTypeOverride.deleteMany({ where: { date: oldWorkDate, userId } });
+        }
+      }
       await prisma.attendanceRecord.delete({ where: { id: record.id } });
     }
 
@@ -492,10 +501,31 @@ export async function setFurikyuWithOverride(
     // JST正午(12:00) = UTC 03:00 に設定（ビジネスデー境界の中央で確実に正しい日に割り当て）
     const furikyuDate = new Date(Date.UTC(fy, fm - 1, fd, 3, 0, 0, 0));
     
-    // 既存のSTATUS_レコードを削除してから新規作成
+    // 既存のSTATUS_レコードを確認（古い振替出勤日のDayTypeOverrideを削除するため）
     const fStart = new Date(Date.UTC(fy, fm - 1, fd, 5 - 9, 0, 0, 0));
     const fEnd = new Date(Date.UTC(fy, fm - 1, fd + 1, 4 - 9, 59, 59, 999));
     
+    const existingStatuses = await prisma.attendanceRecord.findMany({
+      where: {
+        userId,
+        type: "STATUS_FURIKYU",
+        timestamp: { gte: fStart, lte: fEnd }
+      }
+    });
+    
+    // 古い振替出勤日のDayTypeOverrideを削除
+    for (const old of existingStatuses) {
+      if (old.note) {
+        const match = old.note.match(/(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+        if (match) {
+          const [, oy, om, od] = match.map(Number);
+          const oldWorkDate = new Date(Date.UTC(oy, om - 1, od, 3, 0, 0, 0));
+          await prisma.dayTypeOverride.deleteMany({ where: { date: oldWorkDate, userId } });
+        }
+      }
+    }
+    
+    // 既存のSTATUS_レコードを全削除
     await prisma.attendanceRecord.deleteMany({
       where: {
         userId,
