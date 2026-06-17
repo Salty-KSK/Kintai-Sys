@@ -105,10 +105,10 @@ export default async function Dashboard() {
             勤怠集計の確認や管理設定はこちらからどうぞ。
           </p>
           <div style={{ display: 'flex', justifyContent: 'center', gap: 16, flexWrap: 'wrap' }}>
-            <Link href="/summary" className="btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '12px 24px', borderRadius: 20, fontSize: 14, textDecoration: 'none' }}>
+            <Link href="/summary" className="btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '12px 24px', borderRadius: 100, fontSize: 14, textDecoration: 'none' }}>
               <History size={18} /> 勤怠集計
             </Link>
-            <Link href="/admin" className="btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '12px 24px', borderRadius: 20, fontSize: 14, textDecoration: 'none' }}>
+            <Link href="/admin" className="btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '12px 24px', borderRadius: 100, fontSize: 14, textDecoration: 'none' }}>
               <LayoutDashboard size={18} /> 管理設定
             </Link>
           </div>

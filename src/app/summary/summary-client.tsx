@@ -327,7 +327,7 @@ export default function SummaryClient({
             )}
           </div>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <button className="btn-tonal" onClick={prevMonth} disabled={isPending} style={{ padding: "6px 14px", borderRadius: 20, minWidth: 0, opacity: isPending ? 0.5 : 1 }}>◀</button>
+            <button className="btn-tonal" onClick={prevMonth} disabled={isPending} style={{ padding: "6px 14px", borderRadius: 100, minWidth: 0, opacity: isPending ? 0.5 : 1 }}>◀</button>
             <input
               type="month"
               value={`${year}-${String(month).padStart(2, '0')}`}
@@ -340,14 +340,14 @@ export default function SummaryClient({
                 opacity: isPending ? 0.5 : 1,
               }}
             />
-            <button className="btn-tonal" onClick={nextMonth} disabled={isPending} style={{ padding: "6px 14px", borderRadius: 20, minWidth: 0, opacity: isPending ? 0.5 : 1 }}>▶</button>
+            <button className="btn-tonal" onClick={nextMonth} disabled={isPending} style={{ padding: "6px 14px", borderRadius: 100, minWidth: 0, opacity: isPending ? 0.5 : 1 }}>▶</button>
             {isPending && <span style={{ fontSize: 12, color: '#1A73E8', marginLeft: 4 }}>読込中...</span>}
           </div>
           <div style={{ minWidth: 180, display: "flex", justifyContent: "flex-end" }}>
             <button
               onClick={handlePrint}
               className="btn-tonal"
-              style={{ padding: "6px 16px", borderRadius: 20, display: "flex", alignItems: "center", gap: 6 }}
+              style={{ padding: "6px 16px", borderRadius: 100, display: "flex", alignItems: "center", gap: 6 }}
               title="PDF保存 / 印刷"
             >
               <FileDown size={16} />

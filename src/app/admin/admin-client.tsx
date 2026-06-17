@@ -381,7 +381,7 @@ export default function AdminClient({ todayData, allUsers, currentRole, currentU
                   disabled={isPending || !newName.trim() || !newEmailLocal.trim()}
                   onClick={handleRegisterUser}
                   style={{
-                    padding: '6px 16px', fontSize: 12, fontWeight: 500, borderRadius: 20,
+                    padding: '6px 16px', fontSize: 12, fontWeight: 500, borderRadius: 100,
                     cursor: 'pointer', backgroundColor: '#1A73E8', color: '#fff',
                     border: 'none', transition: 'all 0.15s ease', whiteSpace: 'nowrap',
                     opacity: (isPending || !newName.trim() || !newEmailLocal.trim()) ? 0.5 : 1,
@@ -555,7 +555,7 @@ export default function AdminClient({ todayData, allUsers, currentRole, currentU
                   <button
                     onClick={() => setEditingUser(null)}
                     style={{
-                      padding: '8px 20px', fontSize: 13, fontWeight: 500, borderRadius: 20,
+                      padding: '8px 20px', fontSize: 13, fontWeight: 500, borderRadius: 100,
                       cursor: 'pointer', backgroundColor: 'transparent', color: '#5F6368',
                       border: '1px solid #DADCE0', transition: 'all 0.15s ease',
                     }}
@@ -568,7 +568,7 @@ export default function AdminClient({ todayData, allUsers, currentRole, currentU
                     onClick={handleUpdateUser}
                     disabled={isPending || !editName.trim()}
                     style={{
-                      padding: '8px 20px', fontSize: 13, fontWeight: 500, borderRadius: 20,
+                      padding: '8px 20px', fontSize: 13, fontWeight: 500, borderRadius: 100,
                       cursor: 'pointer', backgroundColor: '#1A73E8', color: '#fff',
                       border: 'none', transition: 'all 0.15s ease',
                       opacity: (isPending || !editName.trim()) ? 0.5 : 1,
