@@ -82,22 +82,22 @@ export default function AdminClient({ todayData, allUsers, currentRole, currentD
   // 新規ユーザー登録用の状態
   const [showAddForm, setShowAddForm] = useState(false);
   const [newName, setNewName] = useState("");
-  const [newEmail, setNewEmail] = useState("");
+  const [newEmailLocal, setNewEmailLocal] = useState("");
   const [newEmpId, setNewEmpId] = useState("");
-  const [newDept, setNewDept] = useState(currentRole === "MANAGER" ? currentDepartment || "" : "");
+  const [newDept, setNewDept] = useState(currentRole === "MANAGER" ? currentDepartment || "本社" : "本社");
   const [newRole, setNewRole] = useState("USER");
 
   const isAdmin = currentRole === "ADMIN";
 
   const handleRegisterUser = () => {
     setFeedback(null);
-    if (!newEmail.trim() || !newName.trim()) {
+    if (!newEmailLocal.trim() || !newName.trim()) {
       setFeedback("エラー: 名前とメールアドレスは必須です");
       return;
     }
     startTransition(async () => {
       const result = await registerUser({
-        email: newEmail,
+        email: newEmailLocal.trim() + "@palsekkei.co.jp",
         name: newName,
         employeeId: newEmpId || null,
         department: newDept || null,
@@ -107,10 +107,10 @@ export default function AdminClient({ todayData, allUsers, currentRole, currentD
         setFeedback(`エラー: ${result.error}`);
       } else {
         setFeedback("新規ユーザーを事前登録しました");
-        setNewEmail("");
+        setNewEmailLocal("");
         setNewName("");
         setNewEmpId("");
-        setNewDept(currentRole === "MANAGER" ? currentDepartment || "" : "");
+        setNewDept(currentRole === "MANAGER" ? currentDepartment || "本社" : "本社");
         setNewRole("USER");
         setShowAddForm(false);
       }
@@ -265,7 +265,13 @@ export default function AdminClient({ todayData, allUsers, currentRole, currentD
             <button
               className="btn-tonal"
               onClick={() => setShowAddForm(!showAddForm)}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                backgroundColor: showAddForm ? '#F1F3F4' : '#E8F0FE',
+                color: showAddForm ? '#5F6368' : '#1A73E8',
+              }}
             >
               {showAddForm ? '✕ 閉じる' : '➕ 従業員を事前登録'}
             </button>
@@ -295,15 +301,20 @@ export default function AdminClient({ todayData, allUsers, currentRole, currentD
                     style={{ padding: '8px 12px', fontSize: 13, border: '1px solid #DADCE0', borderRadius: 8, outline: 'none' }}
                   />
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: '1 1 220px' }}>
-                  <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--google-text-sub)' }}>メールアドレス（ログイン用/必須）</label>
-                  <input
-                    type="email"
-                    value={newEmail}
-                    onChange={e => setNewEmail(e.target.value)}
-                    placeholder="yamada@example.com"
-                    style={{ padding: '8px 12px', fontSize: 13, border: '1px solid #DADCE0', borderRadius: 8, outline: 'none' }}
-                  />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: '1 1 240px' }}>
+                  <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--google-text-sub)' }}>メールアドレス（必須）</label>
+                  <div style={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
+                    <input
+                      type="text"
+                      value={newEmailLocal}
+                      onChange={e => setNewEmailLocal(e.target.value)}
+                      placeholder="yamada"
+                      style={{ padding: '8px 12px', fontSize: 13, border: '1px solid #DADCE0', borderRadius: 8, outline: 'none', width: '100%', paddingRight: '120px' }}
+                    />
+                    <span style={{ fontSize: 12, color: 'var(--google-text-sub)', position: 'absolute', right: 12, pointerEvents: 'none' }}>
+                      @palsekkei.co.jp
+                    </span>
+                  </div>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: '1 1 120px' }}>
                   <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--google-text-sub)' }}>社員番号（任意）</label>
@@ -315,16 +326,19 @@ export default function AdminClient({ todayData, allUsers, currentRole, currentD
                     style={{ padding: '8px 12px', fontSize: 13, border: '1px solid #DADCE0', borderRadius: 8, outline: 'none' }}
                   />
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: '1 1 120px' }}>
-                  <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--google-text-sub)' }}>部署（任意）</label>
-                  <input
-                    type="text"
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: '1 1 140px' }}>
+                  <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--google-text-sub)' }}>部署</label>
+                  <select
                     value={newDept}
                     onChange={e => setNewDept(e.target.value)}
                     disabled={currentRole === "MANAGER"}
-                    placeholder="開発部"
-                    style={{ padding: '8px 12px', fontSize: 13, border: '1px solid #DADCE0', borderRadius: 8, outline: 'none', backgroundColor: currentRole === "MANAGER" ? '#F1F3F4' : '#fff' }}
-                  />
+                    style={{ padding: '8px 12px', fontSize: 13, border: '1px solid #DADCE0', borderRadius: 8, outline: 'none', backgroundColor: currentRole === "MANAGER" ? '#F1F3F4' : '#fff', cursor: currentRole === "MANAGER" ? 'default' : 'pointer' }}
+                  >
+                    <option value="本社">本社</option>
+                    <option value="工事第1課">工事第1課</option>
+                    <option value="工事第2課">工事第2課</option>
+                    <option value="工事第3課">工事第3課</option>
+                  </select>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: '1 1 120px' }}>
                   <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--google-text-sub)' }}>権限</label>
@@ -343,9 +357,9 @@ export default function AdminClient({ todayData, allUsers, currentRole, currentD
               <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 4 }}>
                 <button
                   className="btn-primary"
-                  disabled={isPending || !newName.trim() || !newEmail.trim()}
+                  disabled={isPending || !newName.trim() || !newEmailLocal.trim()}
                   onClick={handleRegisterUser}
-                  style={{ padding: '8px 16px', fontSize: 13 }}
+                  style={{ padding: '6px 16px', fontSize: 12, borderRadius: 8, cursor: 'pointer' }}
                 >
                   登録する
                 </button>
