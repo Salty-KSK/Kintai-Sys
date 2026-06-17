@@ -431,14 +431,13 @@ export async function setDayTypeOverride(dateStr: string, dayType: string | null
     const date = new Date(Date.UTC(yyyy, mm - 1, dd, 0, 0, 0, 0));
     const targetUserId = userId || null;
 
-    if (!dayType) {
-      // オーバーライドを削除（自動判定に戻す）
-      await prisma.dayTypeOverride.deleteMany({ where: { date, userId: targetUserId } });
-    } else {
-      await prisma.dayTypeOverride.upsert({
-        where: { date_userId: { date, userId: targetUserId ?? '' } },
-        update: { dayType, reason: reason || null },
-        create: { date, userId: targetUserId, dayType, reason: reason || null }
+    // 既存を削除
+    await prisma.dayTypeOverride.deleteMany({ where: { date, userId: targetUserId } });
+
+    if (dayType) {
+      // 新規作成
+      await prisma.dayTypeOverride.create({
+        data: { date, userId: targetUserId, dayType, reason: reason || null }
       });
     }
 
@@ -494,10 +493,9 @@ export async function setFurikyuWithOverride(
     const [wy, wm, wd] = workDateStr.split(/[-\/]/).map(Number);
     const workDate = new Date(Date.UTC(wy, wm - 1, wd, 0, 0, 0, 0));
     
-    await prisma.dayTypeOverride.upsert({
-      where: { date_userId: { date: workDate, userId } },
-      update: { dayType: "weekday", reason: `振替休日: ${furikyuDateStr}` },
-      create: { date: workDate, userId, dayType: "weekday", reason: `振替休日: ${furikyuDateStr}` }
+    await prisma.dayTypeOverride.deleteMany({ where: { date: workDate, userId } });
+    await prisma.dayTypeOverride.create({
+      data: { date: workDate, userId, dayType: "weekday", reason: `振替休日: ${furikyuDateStr}` }
     });
 
     revalidatePath("/summary");

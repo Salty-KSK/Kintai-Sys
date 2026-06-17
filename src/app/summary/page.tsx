@@ -172,12 +172,16 @@ export default async function SummaryPage({
         })
       );
     })(),
-    dayTypeOverrides: Object.fromEntries(
-      dayTypeOverrides.map(o => [
-        `${new Date(o.date).getFullYear()}/${(new Date(o.date).getMonth()+1).toString().padStart(2,'0')}/${new Date(o.date).getDate().toString().padStart(2,'0')}`,
-        { dayType: o.dayType, reason: o.reason || '' }
-      ])
-    ),
+    dayTypeOverrides: (() => {
+      const map: Record<string, { dayType: string; reason: string }> = {};
+      // グローバル(userId=null)を先に、ユーザー固有を後に処理（後勝ちで上書き）
+      const sorted = [...dayTypeOverrides].sort((a, b) => (a.userId ? 1 : 0) - (b.userId ? 1 : 0));
+      for (const o of sorted) {
+        const key = `${new Date(o.date).getFullYear()}/${(new Date(o.date).getMonth()+1).toString().padStart(2,'0')}/${new Date(o.date).getDate().toString().padStart(2,'0')}`;
+        map[key] = { dayType: o.dayType, reason: o.reason || '' };
+      }
+      return map;
+    })(),
     canEdit: (session.user as any).id === selectedUserId || canViewOthers,
     viewingUserId: selectedUserId,
     sessionUserId: (session.user as any).id,
