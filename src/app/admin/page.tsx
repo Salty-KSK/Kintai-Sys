@@ -130,7 +130,7 @@ export default async function AdminPage() {
   const overtimeUsers = await prisma.user.findMany({
     where: userFilter,
     select: { id: true, name: true, department: true },
-    orderBy: { name: 'asc' },
+    orderBy: { employeeId: 'asc' },
   });
 
   // 当月の全打刻データを一括取得
