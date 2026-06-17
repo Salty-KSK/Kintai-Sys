@@ -9,6 +9,7 @@ import OvertimeHeatmap from "./overtime-heatmap";
 type TodayEntry = {
   id: string;
   name: string;
+  employeeId: string;
   department: string;
   clockIn: string | null;
   clockOut: string | null;
@@ -217,6 +218,7 @@ export default function AdminClient({ todayData, allUsers, currentRole, currentU
           <table className="data-table mt-4">
             <thead>
               <tr>
+                <th>社員番号</th>
                 <th>社員名</th>
                 {isAdmin && <th>部署</th>}
                 <th>出勤時刻</th>
@@ -229,6 +231,7 @@ export default function AdminClient({ todayData, allUsers, currentRole, currentU
             <tbody>
               {filteredTodayData.map((user) => (
                 <tr key={user.id}>
+                  <td style={{ fontSize: 13, color: user.employeeId ? 'inherit' : '#9AA0A6' }}>{user.employeeId || '—'}</td>
                   <td style={{ fontWeight: 'bold' }}>{user.name}</td>
                   {isAdmin && <td style={{ fontSize: 13, color: 'var(--google-text-sub)' }}>{user.department || '—'}</td>}
                   <td>{user.clockIn || '-'}</td>
@@ -250,7 +253,7 @@ export default function AdminClient({ todayData, allUsers, currentRole, currentU
 
               {todayData.length === 0 && (
                 <tr>
-                  <td colSpan={isAdmin ? 7 : 6} className="text-center text-muted" style={{ padding: '24px 0' }}>
+                  <td colSpan={isAdmin ? 8 : 7} className="text-center text-muted" style={{ padding: '24px 0' }}>
                     ユーザーデータがまだありません
                   </td>
                 </tr>

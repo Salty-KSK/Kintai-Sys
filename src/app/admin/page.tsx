@@ -61,7 +61,8 @@ export default async function AdminPage() {
         where: { timestamp: { gte: startOfDay, lte: endOfDay } },
         orderBy: { timestamp: 'asc' }
       }
-    }
+    },
+    orderBy: { employeeId: 'asc' },
   });
 
   const todayData = usersWithAttendance.map((user: any) => {
@@ -76,6 +77,7 @@ export default async function AdminPage() {
     return {
       id: user.id,
       name: user.name || '未設定',
+      employeeId: user.employeeId || '',
       department: user.department || '',
       clockIn: clockIn ? new Date(clockIn.timestamp).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }) : null,
       clockOut: clockOut ? new Date(clockOut.timestamp).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }) : null,
