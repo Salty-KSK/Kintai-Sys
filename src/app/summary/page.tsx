@@ -28,12 +28,12 @@ export default async function SummaryPage({
   // ユーザー取得: ADMIN=全員、MANAGER=同一部署、USER=自分のみ
   let allUsers;
   if (currentRole === "ADMIN") {
-    allUsers = await prisma.user.findMany({ select: { id: true, name: true, employeeId: true, department: true }, orderBy: { name: "asc" } });
+    allUsers = await prisma.user.findMany({ select: { id: true, name: true, employeeId: true, department: true }, orderBy: { employeeId: "asc" } });
   } else if (currentRole === "MANAGER" && currentDept) {
     allUsers = await prisma.user.findMany({
       where: { department: currentDept },
       select: { id: true, name: true, employeeId: true, department: true },
-      orderBy: { name: "asc" },
+      orderBy: { employeeId: "asc" },
     });
   } else {
     allUsers = [{ id: currentUserId, name: (session.user as any).name || "自分", employeeId: "", department: "" }];
