@@ -654,11 +654,7 @@ a {
    ============================================ */
 .data-table {
   width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  border-radius: 12px;
-  overflow: hidden;
-  border: 1px solid var(--google-border-light);
+  border-collapse: collapse;
 }
 
 .data-table th {
@@ -670,6 +666,7 @@ a {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  border-top: 1px solid var(--google-border-light);
   border-bottom: 1px solid var(--google-border-light);
   white-space: nowrap;
 }
@@ -680,10 +677,6 @@ a {
   font-size: 14px;
   color: var(--google-text-main);
   white-space: nowrap;
-}
-
-.data-table tbody tr:last-child td {
-  border-bottom: none;
 }
 
 .data-table tbody tr td {
@@ -935,28 +928,16 @@ a {
 /* 帳票テーブル（スプレッドシート風） */
 .report-table {
   width: auto;
-  border-collapse: separate;
-  border-spacing: 0;
+  border-collapse: collapse;
   font-size: 12px;
   table-layout: auto;
-  border-radius: 12px;
-  overflow: hidden;
 }
 
 .report-table td {
   padding: 5px 10px;
-  border-right: 1px solid var(--google-border-light);
-  border-bottom: 1px solid var(--google-border-light);
+  border: 1px solid var(--google-border-light);
   white-space: nowrap;
   vertical-align: middle;
-}
-
-.report-table tr td:first-child {
-  border-left: 1px solid var(--google-border-light);
-}
-
-.report-table tr:first-child td {
-  border-top: 1px solid var(--google-border-light);
 }
 
 .report-table .section-header {
