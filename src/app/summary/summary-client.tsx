@@ -316,7 +316,7 @@ export default function SummaryClient({
                 className="form-select"
                 value={selectedUser.id}
                 onChange={(e) => navigate(e.target.value)}
-                style={{ minWidth: 160, padding: "8px 12px", borderRadius: 8, border: "1px solid var(--google-border)", fontSize: 14 }}
+                style={{ minWidth: 160, padding: "8px 16px", borderRadius: 100, border: "1px solid var(--google-border)", fontSize: 14 }}
               >
                 {allUsers.map(u => (
                   <option key={u.id} value={u.id}>{u.name}</option>
@@ -335,7 +335,7 @@ export default function SummaryClient({
               disabled={isPending}
               style={{
                 fontSize: 15, fontWeight: 700, textAlign: "center", minWidth: 140,
-                padding: "6px 8px", border: "1px solid #DADCE0", borderRadius: 8,
+                padding: "6px 16px", border: "1px solid #DADCE0", borderRadius: 100,
                 outline: "none", cursor: "pointer", backgroundColor: "#fff",
                 opacity: isPending ? 0.5 : 1,
               }}
