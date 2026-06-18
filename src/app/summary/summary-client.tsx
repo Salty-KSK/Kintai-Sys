@@ -207,15 +207,15 @@ export default function SummaryClient({
     recalcSummaries(updatedRecords);
     setEditingCell(null);
 
-    // サーバー処理はバックグラウンドで実行
-    startTransition(async () => {
+    // サーバー同期はバックグラウンド（UIをブロックしない）
+    (async () => {
       if (!record) {
         await addRecord(date, `${hh}:${mm}`, targetType, viewingUserId);
       } else {
         await updateRecordTime(record.id, `${hh}:${mm}`, date);
       }
       router.refresh();
-    });
+    })();
   };
 
   const deleteClockRecord = () => {
@@ -231,10 +231,11 @@ export default function SummaryClient({
     recalcSummaries(updatedRecords);
     setEditingCell(null);
 
-    startTransition(async () => {
+    // サーバー同期はバックグラウンド
+    (async () => {
       await deleteRecord(record.id);
       router.refresh();
-    });
+    })();
   };
 
   const deleteDayRecords = (date: string) => {
@@ -246,12 +247,13 @@ export default function SummaryClient({
     const updatedRecords = { ...localRecords, [date]: [] };
     recalcSummaries(updatedRecords);
 
-    startTransition(async () => {
+    // サーバー同期はバックグラウンド
+    (async () => {
       for (const r of dayRecords) {
         await deleteRecord(r.id);
       }
       router.refresh();
-    });
+    })();
   };
 
   const saveBreakEdit = () => {
@@ -274,10 +276,11 @@ export default function SummaryClient({
     recalcSummaries(updatedRecords);
     setEditingCell(null);
 
-    startTransition(async () => {
+    // サーバー同期はバックグラウンド
+    (async () => {
       await updateBreakTime(date, minutes, viewingUserId);
       router.refresh();
-    });
+    })();
   };
 
   const saveStatusEdit = () => {
@@ -295,33 +298,33 @@ export default function SummaryClient({
     }
     const statusType = editStatus || null;
     const note = editNote || null;
-    startTransition(async () => {
+    setEditingCell(null);
+    (async () => {
       await setDailyStatus(date, statusType, note, viewingUserId);
-      setEditingCell(null);
       router.refresh();
-    });
+    })();
   };
 
   // 振替出勤日を選択して確定
   const confirmFurikyu = (workDate: string) => {
-    startTransition(async () => {
+    setFurikyuStep(null);
+    setFurikyuDate('');
+    setEditingCell(null);
+    (async () => {
       await setFurikyuWithOverride(furikyuDate, workDate, viewingUserId);
-      setFurikyuStep(null);
-      setFurikyuDate('');
-      setEditingCell(null);
       router.refresh();
-    });
+    })();
   };
 
   // 代休の対象日を選択して確定
   const confirmDaikyu = (targetDate: string) => {
-    startTransition(async () => {
+    setFurikyuStep(null);
+    setFurikyuDate('');
+    setEditingCell(null);
+    (async () => {
       await setDailyStatus(furikyuDate, 'STATUS_DAIKYU', targetDate, viewingUserId);
-      setFurikyuStep(null);
-      setFurikyuDate('');
-      setEditingCell(null);
       router.refresh();
-    });
+    })();
   };
 
   // 期間内の土曜日・日曜日・祝日を取得（振替出勤日の候補）
@@ -347,10 +350,10 @@ export default function SummaryClient({
     const { date } = editingCell;
     const newDayType = editDayType || null;
     setEditingCell(null);
-    startTransition(async () => {
+    (async () => {
       await setDayTypeOverride(date, newDayType, undefined, viewingUserId);
       router.refresh();
-    });
+    })();
   };
 
   const ms = monthlySummary;
