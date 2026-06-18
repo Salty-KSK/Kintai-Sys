@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { unstable_cache } from "next/cache";
 import { calculateDailyStats, formatTime } from "@/lib/attendanceCalc";
 import {
   calculateDailySummary,
@@ -74,8 +75,8 @@ export default async function AdminPage() {
     usersWithAttendance,
     allRecords,
     holidays,
-    yearRecords,
-    yearHolidays,
+    yearRecordsCached,
+    yearHolidaysCached,
     allHolidays,
   ] = await Promise.all([
     // ユーザー + 当日打刻（ユーザー管理 & 本日の勤務状況 兼用）
@@ -101,21 +102,32 @@ export default async function AdminPage() {
     prisma.holiday.findMany({
       where: { date: { gte: startUTC, lte: endUTC } },
     }),
-    // 年初〜前月の打刻データ
-    prisma.attendanceRecord.findMany({
-      where: {
-        user: userFilter,
-        timestamp: { gte: yearStartUTC, lt: yearEndUTC },
-      },
-      orderBy: { timestamp: 'asc' },
-    }),
-    // 年初〜前月の祝日
-    prisma.holiday.findMany({
-      where: { date: { gte: yearStartUTC, lt: yearEndUTC } },
-    }),
+    // 年初〜前月の打刻データ（キャッシュ: 過去データなので頻繁に変わらない）
+    unstable_cache(
+      async () => prisma.attendanceRecord.findMany({
+        where: {
+          user: userFilter,
+          timestamp: { gte: yearStartUTC, lt: yearEndUTC },
+        },
+        orderBy: { timestamp: 'asc' },
+      }),
+      ['admin-year-records', currentDept || 'all', String(currentYear), String(currentMonth)],
+      { revalidate: 300 }
+    )(),
+    // 年初〜前月の祝日（キャッシュ）
+    unstable_cache(
+      async () => prisma.holiday.findMany({
+        where: { date: { gte: yearStartUTC, lt: yearEndUTC } },
+      }),
+      ['admin-year-holidays', String(currentYear), String(currentMonth)],
+      { revalidate: 300 }
+    )(),
     // 全祝日（祝日管理タブ用）
     prisma.holiday.findMany({ orderBy: { date: 'asc' } }),
   ]);
+
+  const yearRecords = yearRecordsCached;
+  const yearHolidays = yearHolidaysCached;
 
   // ===== ② usersWithAttendanceから各種データを導出 =====
 

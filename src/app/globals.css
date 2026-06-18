@@ -3,8 +3,6 @@
    Modern Dashboard テーマ globals.css
    ============================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&display=swap');
-
 :root {
   --google-bg: #F4F6FA;
   --google-surface: #FFFFFF;
