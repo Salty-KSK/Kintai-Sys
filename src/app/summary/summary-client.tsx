@@ -332,7 +332,26 @@ export default function SummaryClient({
     }
     const statusType = editStatus || null;
     const note = editNote || null;
+
+    // クライアント側で即座にステータスレコードを更新して再計算
+    const dayRecords = localRecords[date] || [];
+    let updatedDayRecords: RecordItem[];
+    if (statusType) {
+      // ステータスを設定: 既存STATUS_*を置換 or 追加
+      const existing = dayRecords.find(r => r.type.startsWith('STATUS_'));
+      if (existing) {
+        updatedDayRecords = dayRecords.map(r => r.id === existing.id ? { ...r, type: statusType, note } : r);
+      } else {
+        updatedDayRecords = [...dayRecords, { id: `temp-status-${Date.now()}`, type: statusType, timestamp: new Date().toISOString(), breakMinutes: null, note }];
+      }
+    } else {
+      // ステータスを削除: STATUS_*レコードを全て除去
+      updatedDayRecords = dayRecords.filter(r => !r.type.startsWith('STATUS_'));
+    }
+    const updatedRecords = { ...localRecords, [date]: updatedDayRecords };
+    recalcSummaries(updatedRecords);
     setEditingCell(null);
+
     (async () => {
       await setDailyStatus(date, statusType, note, viewingUserId);
       router.refresh();
