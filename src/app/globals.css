@@ -654,7 +654,11 @@ a {
    ============================================ */
 .data-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid var(--google-border-light);
+  border-radius: 12px;
+  overflow: hidden;
 }
 
 .data-table th {
@@ -666,7 +670,6 @@ a {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  border-top: none;
   border-bottom: 2px solid var(--google-border-light);
   white-space: nowrap;
 }
@@ -677,6 +680,10 @@ a {
   font-size: 14px;
   color: var(--google-text-main);
   white-space: nowrap;
+}
+
+.data-table tbody tr:last-child td {
+  border-bottom: none;
 }
 
 .data-table tbody tr td {
@@ -928,9 +935,13 @@ a {
 /* 帳票テーブル（スプレッドシート風） */
 .report-table {
   width: auto;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   font-size: 12px;
   table-layout: auto;
+  border: 1px solid var(--google-border-light);
+  border-radius: 12px;
+  overflow: hidden;
 }
 
 .report-table td {
