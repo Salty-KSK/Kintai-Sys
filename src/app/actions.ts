@@ -276,6 +276,22 @@ export async function setDailyStatus(dateStr: string, statusType: string | null,
       await prisma.attendanceRecord.delete({ where: { id: record.id } });
     }
 
+    // ステータスクリア時: この日自身のDayTypeOverrideも削除（孤立オーバーライド対策）
+    if (!statusType) {
+      const thisDateStart = new Date(Date.UTC(yyyy, mm - 1, dd, 0, 0, 0, 0));
+      const thisDateEnd = new Date(Date.UTC(yyyy, mm - 1, dd, 23, 59, 59, 999));
+      await prisma.dayTypeOverride.deleteMany({ where: { date: { gte: thisDateStart, lte: thisDateEnd }, userId } });
+
+      // この日を参照するDayTypeOverride（振替出勤日側）も検索して削除
+      const datePattern = `${yyyy}/${String(mm).padStart(2,'0')}/${String(dd).padStart(2,'0')}`;
+      const relatedOverrides = await prisma.dayTypeOverride.findMany({
+        where: { userId, reason: { contains: datePattern } }
+      });
+      for (const ov of relatedOverrides) {
+        await prisma.dayTypeOverride.delete({ where: { id: ov.id } });
+      }
+    }
+
     if (statusType) {
       // 新しいステータス（代休など）を登録（タイムスタンプはその日の適当な時間：ここではstartOfDay + 1時間）
       const recordTime = new Date(startOfDay.getTime() + 60 * 60 * 1000);

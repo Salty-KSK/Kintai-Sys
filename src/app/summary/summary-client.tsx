@@ -344,17 +344,28 @@ export default function SummaryClient({
     const dayRecords = localRecords[date] || [];
     let updatedOverrides: Record<string, { dayType: string; reason: string }> | undefined;
 
-    // 既存の振休レコードがある場合、ペアの振替出勤日のDayTypeOverrideも除去
-    const existingFurikyu = dayRecords.find(r => r.type === 'STATUS_FURIKYU');
-    if (existingFurikyu && existingFurikyu.note) {
-      const match = existingFurikyu.note.match(/(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
-      if (match) {
-        const [, oy, om, od] = match;
-        const pairedDateStr = `${oy}/${om.padStart(2, '0')}/${od.padStart(2, '0')}`;
-        updatedOverrides = { ...localDayTypeOverrides };
-        delete updatedOverrides[pairedDateStr];
-        // 自分自身のオーバーライドも削除
-        delete updatedOverrides[date];
+    // ステータスクリア時: 関連するDayTypeOverrideを全て除去
+    if (!statusType) {
+      updatedOverrides = { ...localDayTypeOverrides };
+      // 当日のオーバーライドを削除
+      delete updatedOverrides[date];
+
+      // 既存の振休レコードがある場合、ペアの振替出勤日のオーバーライドも除去
+      const existingFurikyu = dayRecords.find(r => r.type === 'STATUS_FURIKYU');
+      if (existingFurikyu && existingFurikyu.note) {
+        const match = existingFurikyu.note.match(/(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+        if (match) {
+          const [, oy, om, od] = match;
+          const pairedDateStr = `${oy}/${om.padStart(2, '0')}/${od.padStart(2, '0')}`;
+          delete updatedOverrides[pairedDateStr];
+        }
+      }
+
+      // 当日を参照するオーバーライドも除去（孤立オーバーライド対策）
+      for (const [key, ov] of Object.entries(updatedOverrides)) {
+        if (ov.reason && ov.reason.includes(date)) {
+          delete updatedOverrides[key];
+        }
       }
     }
 
