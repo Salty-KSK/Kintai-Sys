@@ -656,9 +656,9 @@ a {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
-  border: 1px solid var(--google-border-light);
   border-radius: 12px;
   overflow: hidden;
+  border: 1px solid var(--google-border-light);
 }
 
 .data-table th {
@@ -670,13 +670,13 @@ a {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  border-bottom: 2px solid var(--google-border-light);
+  border-bottom: 1px solid var(--google-border-light);
   white-space: nowrap;
 }
 
 .data-table td {
-  padding: 14px 20px;
-  border-bottom: 1px solid #F1F5F9;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--google-border-light);
   font-size: 14px;
   color: var(--google-text-main);
   white-space: nowrap;
@@ -939,16 +939,24 @@ a {
   border-spacing: 0;
   font-size: 12px;
   table-layout: auto;
-  border: 1px solid var(--google-border-light);
   border-radius: 12px;
   overflow: hidden;
 }
 
 .report-table td {
   padding: 5px 10px;
-  border: 1px solid var(--google-border-light);
+  border-right: 1px solid var(--google-border-light);
+  border-bottom: 1px solid var(--google-border-light);
   white-space: nowrap;
   vertical-align: middle;
+}
+
+.report-table tr td:first-child {
+  border-left: 1px solid var(--google-border-light);
+}
+
+.report-table tr:first-child td {
+  border-top: 1px solid var(--google-border-light);
 }
 
 .report-table .section-header {
