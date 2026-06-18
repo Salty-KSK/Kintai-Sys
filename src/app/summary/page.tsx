@@ -60,7 +60,7 @@ export default async function SummaryPage({
   const endUTC = new Date(Date.UTC(endDate.getFullYear(), endDate.getMonth(), endDate.getDate() + 1, 12 - 9, 59, 59, 999));
 
   // 打刻データ、祝日、オーバーライドを並列取得
-  const [records, holidays, dayTypeOverrides] = await Promise.all([
+  let [records, holidays, dayTypeOverrides] = await Promise.all([
     prisma.attendanceRecord.findMany({
       where: {
         userId: selectedUserId,
@@ -82,6 +82,24 @@ export default async function SummaryPage({
     }),
   ]);
   const holidayDates = holidays.map(h => h.date);
+
+  // 孤立した振替系DayTypeOverrideを自動クリーンアップ
+  const orphanedOverrideIds: string[] = [];
+  for (const ov of dayTypeOverrides) {
+    if (ov.userId && ov.reason && ov.reason.includes('振替休日')) {
+      // この振替出勤日オーバーライドに対応するSTATUS_FURIKYUレコードが存在するか確認
+      const hasFurikyu = records.some(r =>
+        r.type === 'STATUS_FURIKYU' && r.note && r.note.includes('振替出勤日')
+      );
+      if (!hasFurikyu) {
+        orphanedOverrideIds.push(ov.id);
+      }
+    }
+  }
+  if (orphanedOverrideIds.length > 0) {
+    await prisma.dayTypeOverride.deleteMany({ where: { id: { in: orphanedOverrideIds } } });
+    dayTypeOverrides = dayTypeOverrides.filter(o => !orphanedOverrideIds.includes(o.id));
+  }
 
   // 日別集計（レコードの重複割り当て防止用セット）
   const lastDate = dates[dates.length - 1];

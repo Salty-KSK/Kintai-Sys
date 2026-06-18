@@ -100,6 +100,17 @@ export async function deleteRecord(id: string) {
     const record = await prisma.attendanceRecord.findUnique({ where: { id } });
     if (!record) return { error: "Not found" };
     
+    // STATUS_FURIKYUレコードの場合、関連するDayTypeOverrideもクリーンアップ
+    if (record.type === "STATUS_FURIKYU" && record.note) {
+      const match = record.note.match(/(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+      if (match) {
+        const [, oy, om, od] = match.map(Number);
+        const oldDateStart = new Date(Date.UTC(oy, om - 1, od, 0, 0, 0, 0));
+        const oldDateEnd = new Date(Date.UTC(oy, om - 1, od, 23, 59, 59, 999));
+        await prisma.dayTypeOverride.deleteMany({ where: { date: { gte: oldDateStart, lte: oldDateEnd }, userId: record.userId } });
+      }
+    }
+
     await prisma.attendanceRecord.delete({ where: { id } });
     
     // スプレッドシートへ同期送信（バックグラウンド実行・待たない）

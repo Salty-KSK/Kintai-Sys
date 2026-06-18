@@ -284,9 +284,33 @@ export default function SummaryClient({
     if (dayRecords.length === 0) return;
     if (!confirm(`${date.slice(5)} のデータを全て削除しますか？`)) return;
 
+    // STATUS_FURIKYUがある場合、関連DayTypeOverrideも除去
+    let updatedOverrides: Record<string, { dayType: string; reason: string }> | undefined;
+    const furikyuRecord = dayRecords.find(r => r.type === 'STATUS_FURIKYU');
+    if (furikyuRecord) {
+      updatedOverrides = { ...localDayTypeOverrides };
+      // 当日のオーバーライドを削除
+      delete updatedOverrides[date];
+      // ペアの振替出勤日のオーバーライドも除去
+      if (furikyuRecord.note) {
+        const match = furikyuRecord.note.match(/(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+        if (match) {
+          const [, oy, om, od] = match;
+          const pairedDateStr = `${oy}/${om.padStart(2, '0')}/${od.padStart(2, '0')}`;
+          delete updatedOverrides[pairedDateStr];
+        }
+      }
+      // 当日を参照するオーバーライドも除去
+      for (const [key, ov] of Object.entries(updatedOverrides)) {
+        if (ov.reason && ov.reason.includes(date)) {
+          delete updatedOverrides[key];
+        }
+      }
+    }
+
     // クライアント側で即座に全レコードを削除して再計算
     const updatedRecords = { ...localRecords, [date]: [] };
-    recalcSummaries(updatedRecords);
+    recalcSummaries(updatedRecords, updatedOverrides);
 
     // サーバー同期はバックグラウンド
     (async () => {
