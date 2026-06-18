@@ -59,18 +59,25 @@ export default function SummaryClient({
 
   // ===== ローカルstate: サーバーを待たず即座に再計算 =====
   const [localRecords, setLocalRecords] = useState(initialRecords);
+  const [localDayTypeOverrides, setLocalDayTypeOverrides] = useState(dayTypeOverrides);
   const [dailySummaries, setDailySummaries] = useState(initialDailySummaries);
   const [monthlySummary, setMonthlySummary] = useState(initialMonthlySummary);
 
   // サーバーからpropsが更新されたら同期
   useEffect(() => {
     setLocalRecords(initialRecords);
+    setLocalDayTypeOverrides(dayTypeOverrides);
     setDailySummaries(initialDailySummaries);
     setMonthlySummary(initialMonthlySummary);
-  }, [initialRecords, initialDailySummaries, initialMonthlySummary]);
+  }, [initialRecords, dayTypeOverrides, initialDailySummaries, initialMonthlySummary]);
 
   // クライアント側で即座に集計を再計算する関数（サーバーのpage.tsxと同一ロジック）
-  const recalcSummaries = (updatedRecords: Record<string, RecordItem[]>) => {
+  const recalcSummaries = (updatedRecords: Record<string, RecordItem[]>, updatedOverrides?: Record<string, { dayType: string; reason: string }>) => {
+    const currentOverrides = updatedOverrides || localDayTypeOverrides;
+    if (updatedOverrides) {
+      setLocalDayTypeOverrides(updatedOverrides);
+    }
+
     const dates = generateDateRange(year, month);
     // 祝日リストをinitialDailySummariesから取得
     const holidayDates = initialDailySummaries
@@ -116,7 +123,7 @@ export default function SummaryClient({
       }));
 
       // 当日のオーバーライド
-      const override = dayTypeOverrides[dateStr];
+      const override = currentOverrides[dateStr];
 
       // 翌暦日のdayTypeを計算（サーバーと同一ロジック）
       const nextCalDate = new Date(y, m, d + 1);
@@ -131,7 +138,7 @@ export default function SummaryClient({
       );
       if (nextIsHoliday && nextDayType === "weekday") nextDayType = "holiday";
       const nextDateStr = `${nextCalDate.getFullYear()}/${(nextCalDate.getMonth()+1).toString().padStart(2,'0')}/${nextCalDate.getDate().toString().padStart(2,'0')}`;
-      const nextOverride = dayTypeOverrides[nextDateStr];
+      const nextOverride = currentOverrides[nextDateStr];
       if (nextOverride) nextDayType = nextOverride.dayType as DayType;
 
       return calculateDailySummary(date, recordsForCalc, holidayDates, (override?.dayType as DayType) || null, nextDayType);
@@ -335,6 +342,22 @@ export default function SummaryClient({
 
     // クライアント側で即座にステータスレコードを更新して再計算
     const dayRecords = localRecords[date] || [];
+    let updatedOverrides: Record<string, { dayType: string; reason: string }> | undefined;
+
+    // 既存の振休レコードがある場合、ペアの振替出勤日のDayTypeOverrideも除去
+    const existingFurikyu = dayRecords.find(r => r.type === 'STATUS_FURIKYU');
+    if (existingFurikyu && existingFurikyu.note) {
+      const match = existingFurikyu.note.match(/(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+      if (match) {
+        const [, oy, om, od] = match;
+        const pairedDateStr = `${oy}/${om.padStart(2, '0')}/${od.padStart(2, '0')}`;
+        updatedOverrides = { ...localDayTypeOverrides };
+        delete updatedOverrides[pairedDateStr];
+        // 自分自身のオーバーライドも削除
+        delete updatedOverrides[date];
+      }
+    }
+
     let updatedDayRecords: RecordItem[];
     if (statusType) {
       // ステータスを設定: 既存STATUS_*を置換 or 追加
@@ -349,7 +372,7 @@ export default function SummaryClient({
       updatedDayRecords = dayRecords.filter(r => !r.type.startsWith('STATUS_'));
     }
     const updatedRecords = { ...localRecords, [date]: updatedDayRecords };
-    recalcSummaries(updatedRecords);
+    recalcSummaries(updatedRecords, updatedOverrides);
     setEditingCell(null);
 
     (async () => {
@@ -393,7 +416,7 @@ export default function SummaryClient({
 
   const startDayTypeEdit = (d: DailySummary) => {
     if (!canEdit) return;
-    const override = dayTypeOverrides[d.date];
+    const override = localDayTypeOverrides[d.date];
     setEditDayType(override?.dayType || '');
     setEditingCell({ date: d.date, field: 'dayType' });
   };
@@ -663,7 +686,7 @@ export default function SummaryClient({
                     <td>{d.date.slice(5)}</td>
                     {(() => {
                       const isEditingDayType = editingCell?.date === d.date && editingCell.field === 'dayType';
-                      const hasOverride = !!dayTypeOverrides[d.date];
+                      const hasOverride = !!localDayTypeOverrides[d.date];
                       return (
                         <td 
                           className={dowClass}
@@ -689,8 +712,8 @@ export default function SummaryClient({
                           ) : (
                             <div>
                               {d.dayOfWeek}{hasOverride ? '*' : ''}
-                              {hasOverride && dayTypeOverrides[d.date]?.reason && (
-                                <div style={{fontSize:9, color:'#E65100', lineHeight:1.1, whiteSpace:'nowrap'}}>{dayTypeOverrides[d.date].reason}</div>
+                              {hasOverride && localDayTypeOverrides[d.date]?.reason && (
+                                <div style={{fontSize:9, color:'#E65100', lineHeight:1.1, whiteSpace:'nowrap'}}>{localDayTypeOverrides[d.date].reason}</div>
                               )}
                             </div>
                           )}
@@ -858,7 +881,7 @@ export default function SummaryClient({
                             const parts: string[] = [];
                             if (isLeave) parts.push(d.status);
                             else if (d.status === "退勤済") parts.push("退勤済");
-                            const ov = dayTypeOverrides[d.date];
+                            const ov = localDayTypeOverrides[d.date];
                             if (ov?.reason) parts.push(ov.reason);
                             return parts.join(' / ') || '';
                           })()}
