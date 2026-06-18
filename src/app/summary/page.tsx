@@ -28,15 +28,15 @@ export default async function SummaryPage({
   // ユーザー取得: ADMIN=全員、MANAGER=同一部署、USER=自分のみ
   let allUsers;
   if (currentRole === "ADMIN") {
-    allUsers = await prisma.user.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } });
+    allUsers = await prisma.user.findMany({ select: { id: true, name: true, employeeId: true, department: true }, orderBy: { name: "asc" } });
   } else if (currentRole === "MANAGER" && currentDept) {
     allUsers = await prisma.user.findMany({
       where: { department: currentDept },
-      select: { id: true, name: true },
+      select: { id: true, name: true, employeeId: true, department: true },
       orderBy: { name: "asc" },
     });
   } else {
-    allUsers = [{ id: currentUserId, name: (session.user as any).name || "自分" }];
+    allUsers = [{ id: currentUserId, name: (session.user as any).name || "自分", employeeId: "", department: "" }];
   }
 
   // 選択中のユーザー
@@ -56,36 +56,32 @@ export default async function SummaryPage({
   const endDate = new Date(dates[dates.length - 1]);
   endDate.setHours(23, 59, 59, 999);
 
-  // 打刻データ取得
   const startUTC = new Date(Date.UTC(startDate.getFullYear(), startDate.getMonth(), startDate.getDate(), -9, 0, 0));
   const endUTC = new Date(Date.UTC(endDate.getFullYear(), endDate.getMonth(), endDate.getDate() + 1, 12 - 9, 59, 59, 999));
 
-  const records = await prisma.attendanceRecord.findMany({
-    where: {
-      userId: selectedUserId,
-      timestamp: { gte: startUTC, lte: endUTC }
-    },
-    orderBy: { timestamp: "asc" }
-  });
-
-  // 祝日取得
-  const holidays = await prisma.holiday.findMany({
-    where: {
-      date: { gte: startUTC, lte: endUTC }
-    }
-  });
+  // 打刻データ、祝日、オーバーライドを並列取得
+  const [records, holidays, dayTypeOverrides] = await Promise.all([
+    prisma.attendanceRecord.findMany({
+      where: {
+        userId: selectedUserId,
+        timestamp: { gte: startUTC, lte: endUTC }
+      },
+      orderBy: { timestamp: "asc" }
+    }),
+    prisma.holiday.findMany({
+      where: { date: { gte: startUTC, lte: endUTC } }
+    }),
+    prisma.dayTypeOverride.findMany({
+      where: {
+        date: { gte: startUTC, lte: endUTC },
+        OR: [
+          { userId: selectedUserId },
+          { userId: null }
+        ]
+      }
+    }),
+  ]);
   const holidayDates = holidays.map(h => h.date);
-
-  // 勤務種別オーバーライド取得（対象ユーザー + グローバル）
-  const dayTypeOverrides = await prisma.dayTypeOverride.findMany({
-    where: {
-      date: { gte: startUTC, lte: endUTC },
-      OR: [
-        { userId: selectedUserId },
-        { userId: null }
-      ]
-    }
-  });
 
   // 日別集計（レコードの重複割り当て防止用セット）
   const lastDate = dates[dates.length - 1];
@@ -148,11 +144,8 @@ export default async function SummaryPage({
   // 月間サマリー
   const monthlySummary = calculateMonthlySummary(dailySummaries);
 
-  // ユーザー情報
-  const selectedUser = await prisma.user.findUnique({
-    where: { id: selectedUserId },
-    select: { name: true, employeeId: true, department: true }
-  });
+  // ユーザー情報（allUsersから導出 — 追加クエリ不要）
+  const selectedUser = allUsers.find(u => u.id === selectedUserId) || { name: '未設定', employeeId: '', department: '' };
 
   // 期間文字列
   const periodStr = `${dates[0].getFullYear()}/${(dates[0].getMonth()+1).toString().padStart(2,'0')}/${dates[0].getDate().toString().padStart(2,'0')} 〜 ${dates[dates.length-1].getFullYear()}/${(dates[dates.length-1].getMonth()+1).toString().padStart(2,'0')}/${dates[dates.length-1].getDate().toString().padStart(2,'0')}`;
@@ -164,8 +157,8 @@ export default async function SummaryPage({
     selectedUser: {
       id: selectedUserId,
       name: selectedUser?.name || "未設定",
-      employeeId: selectedUser?.employeeId || "",
-      department: selectedUser?.department || ""
+      employeeId: (selectedUser as any)?.employeeId || "",
+      department: (selectedUser as any)?.department || ""
     },
     allUsers: allUsers.map(u => ({ id: u.id, name: u.name || "未設定" })),
     year,

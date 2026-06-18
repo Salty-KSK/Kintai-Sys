@@ -53,18 +53,73 @@ export default async function AdminPage() {
     ? { department: currentDept }
     : {};
 
-  // 本日の勤務データ（勤務状況タブ用）
-  const usersWithAttendance = await prisma.user.findMany({
-    where: userFilter,
-    include: {
-      attendances: {
-        where: { timestamp: { gte: startOfDay, lte: endOfDay } },
-        orderBy: { timestamp: 'asc' }
-      }
-    },
-    orderBy: { employeeId: 'asc' },
-  });
+  // ===== 日時計算 =====
+  const jstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+  const currentYear = jstNow.getUTCFullYear();
+  const currentMonth = jstNow.getUTCMonth() + 1;
 
+  const dates = generateDateRange(currentYear, currentMonth);
+  const periodStart = dates[0];
+  const periodEnd = new Date(dates[dates.length - 1]);
+  periodEnd.setHours(23, 59, 59, 999);
+
+  const startUTC = new Date(Date.UTC(periodStart.getFullYear(), periodStart.getMonth(), periodStart.getDate(), -9, 0, 0));
+  const endUTC = new Date(Date.UTC(periodEnd.getFullYear(), periodEnd.getMonth(), periodEnd.getDate() + 1, 4 - 9, 59, 59, 999));
+
+  const yearStartUTC = new Date(Date.UTC(currentYear - 1, 11, 26, -9, 0, 0));
+  const yearEndUTC = startUTC;
+
+  // ===== ① 全DBクエリをPromise.allで並列実行 (8逐次→6並列) =====
+  const [
+    usersWithAttendance,
+    allRecords,
+    holidays,
+    yearRecords,
+    yearHolidays,
+    allHolidays,
+  ] = await Promise.all([
+    // ユーザー + 当日打刻（ユーザー管理 & 本日の勤務状況 兼用）
+    prisma.user.findMany({
+      where: userFilter,
+      include: {
+        attendances: {
+          where: { timestamp: { gte: startOfDay, lte: endOfDay } },
+          orderBy: { timestamp: 'asc' }
+        }
+      },
+      orderBy: { employeeId: 'asc' },
+    }),
+    // 当月の全打刻データ
+    prisma.attendanceRecord.findMany({
+      where: {
+        user: userFilter,
+        timestamp: { gte: startUTC, lte: endUTC },
+      },
+      orderBy: { timestamp: 'asc' },
+    }),
+    // 当月の祝日
+    prisma.holiday.findMany({
+      where: { date: { gte: startUTC, lte: endUTC } },
+    }),
+    // 年初〜前月の打刻データ
+    prisma.attendanceRecord.findMany({
+      where: {
+        user: userFilter,
+        timestamp: { gte: yearStartUTC, lt: yearEndUTC },
+      },
+      orderBy: { timestamp: 'asc' },
+    }),
+    // 年初〜前月の祝日
+    prisma.holiday.findMany({
+      where: { date: { gte: yearStartUTC, lt: yearEndUTC } },
+    }),
+    // 全祝日（祝日管理タブ用）
+    prisma.holiday.findMany({ orderBy: { date: 'asc' } }),
+  ]);
+
+  // ===== ② usersWithAttendanceから各種データを導出 =====
+
+  // 本日の勤務データ
   const todayData = usersWithAttendance.map((user: any) => {
     const clockIn = user.attendances.find((a: any) => a.type === 'CLOCK_IN');
     const clockOut = user.attendances.find((a: any) => a.type === 'CLOCK_OUT');
@@ -88,23 +143,8 @@ export default async function AdminPage() {
     };
   });
 
-  // 全ユーザー一覧（ユーザー管理タブ用）
-  const allUsers = await prisma.user.findMany({
-    where: userFilter,
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      role: true,
-      department: true,
-      position: true,
-      employeeId: true,
-    },
-    orderBy: { employeeId: 'asc' }
-  });
-
-  // roleをstring型に変換（シリアライズ対応）
-  const serializedUsers = allUsers.map((u: any) => ({
+  // ユーザー一覧（同じデータから導出 — 追加クエリ不要）
+  const serializedUsers = usersWithAttendance.map((u: any) => ({
     id: u.id,
     name: u.name || '未設定',
     email: u.email || '',
@@ -114,74 +154,40 @@ export default async function AdminPage() {
     employeeId: u.employeeId || '',
   }));
 
-  // ===== 残業ヒートマップ用データ =====
-  const jstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000);
-  const currentYear = jstNow.getUTCFullYear();
-  const currentMonth = jstNow.getUTCMonth() + 1;
+  // ===== ③ レコードをユーザーIDでMapに事前分割 (O(N²) → O(N)) =====
+  const allRecordsByUser = new Map<string, typeof allRecords>();
+  for (const r of allRecords) {
+    const arr = allRecordsByUser.get(r.userId) || [];
+    arr.push(r);
+    allRecordsByUser.set(r.userId, arr);
+  }
 
-  // 当月の日付範囲（前月26日～当月25日）
-  const dates = generateDateRange(currentYear, currentMonth);
-  const periodStart = dates[0];
-  const periodEnd = new Date(dates[dates.length - 1]);
-  periodEnd.setHours(23, 59, 59, 999);
+  const yearRecordsByUser = new Map<string, typeof yearRecords>();
+  for (const r of yearRecords) {
+    const arr = yearRecordsByUser.get(r.userId) || [];
+    arr.push(r);
+    yearRecordsByUser.set(r.userId, arr);
+  }
 
-  const startUTC = new Date(Date.UTC(periodStart.getFullYear(), periodStart.getMonth(), periodStart.getDate(), -9, 0, 0));
-  const endUTC = new Date(Date.UTC(periodEnd.getFullYear(), periodEnd.getMonth(), periodEnd.getDate() + 1, 4 - 9, 59, 59, 999));
-
-  // 対象ユーザー一覧を取得
-  const overtimeUsers = await prisma.user.findMany({
-    where: userFilter,
-    select: { id: true, name: true, department: true },
-    orderBy: { employeeId: 'asc' },
-  });
-
-  // 当月の全打刻データを一括取得
-  const allRecords = await prisma.attendanceRecord.findMany({
-    where: {
-      userId: { in: overtimeUsers.map(u => u.id) },
-      timestamp: { gte: startUTC, lte: endUTC },
-    },
-    orderBy: { timestamp: 'asc' },
-  });
-
-  // 祝日取得
-  const holidays = await prisma.holiday.findMany({
-    where: { date: { gte: startUTC, lte: endUTC } },
-  });
   const holidayDates = holidays.map(h => h.date);
-
-  // 年累計用: 1月〜前月分の残業を簡易集計
-  // 各月のビジネスピリオド内の打刻を取得して残業を集計
-  const yearStartUTC = new Date(Date.UTC(currentYear - 1, 11, 26, -9, 0, 0)); // 1月期間 = 前年12/26開始
-  const yearEndUTC = startUTC; // 当月開始日まで
-
-  const yearRecords = await prisma.attendanceRecord.findMany({
-    where: {
-      userId: { in: overtimeUsers.map(u => u.id) },
-      timestamp: { gte: yearStartUTC, lt: yearEndUTC },
-    },
-    orderBy: { timestamp: 'asc' },
-  });
-
-  const yearHolidays = await prisma.holiday.findMany({
-    where: { date: { gte: yearStartUTC, lt: yearEndUTC } },
-  });
   const yearHolidayDates = yearHolidays.map(h => h.date);
 
-  // ユーザーごとの月別内訳を計算（1月～当月）
+  // ===== ④ 月別残業集計 =====
   type MonthBreakdown = { month: number; periodStr: string; overtimeMin: number; holidayMin: number; totalMin: number };
   const yearlyBreakdownMap: Record<string, MonthBreakdown[]> = {};
 
-  for (const user of overtimeUsers) {
+  for (const user of usersWithAttendance) {
+    const userAllRecords = allRecordsByUser.get(user.id) || [];
+    const userYearRecords = yearRecordsByUser.get(user.id) || [];
     const breakdowns: MonthBreakdown[] = [];
+
     for (let m = 1; m <= currentMonth; m++) {
       const mDates = generateDateRange(currentYear, m);
       const mPeriodStr = `${mDates[0].getMonth()+1}/${mDates[0].getDate()}～${mDates[mDates.length-1].getMonth()+1}/${mDates[mDates.length-1].getDate()}`;
       let overtimeMin = 0;
       let holidayMin = 0;
 
-      // 当月以外はyearRecords、当月はallRecordsを使う
-      const sourceRecords = m < currentMonth ? yearRecords : allRecords;
+      const sourceRecords = m < currentMonth ? userYearRecords : userAllRecords;
       const sourceHolidays = m < currentMonth ? yearHolidayDates : holidayDates;
 
       for (const date of mDates) {
@@ -190,7 +196,6 @@ export default async function AdminPage() {
         const dayEnd = new Date(Date.UTC(y, mo, dd + 1, 4 - 9, 59, 59, 999));
 
         const dayRecords = sourceRecords.filter(r =>
-          r.userId === user.id &&
           new Date(r.timestamp) >= dayStart &&
           new Date(r.timestamp) <= dayEnd
         );
@@ -213,15 +218,15 @@ export default async function AdminPage() {
     yearlyBreakdownMap[user.id] = breakdowns;
   }
 
-  // 当月の日別サマリーを各ユーザーごとに計算
-  const employeesData = overtimeUsers.map(user => {
+  // 当月の日別サマリー
+  const employeesData = usersWithAttendance.map((user: any) => {
+    const userRecords = allRecordsByUser.get(user.id) || [];
     const dailySummaries: DailySummary[] = dates.map(date => {
       const y = date.getFullYear(), m = date.getMonth(), d = date.getDate();
       const dayStart = new Date(Date.UTC(y, m, d, 5 - 9, 0, 0, 0));
       const dayEnd = new Date(Date.UTC(y, m, d + 1, 4 - 9, 59, 59, 999));
 
-      const dayRecords = allRecords.filter(r =>
-        r.userId === user.id &&
+      const dayRecords = userRecords.filter(r =>
         new Date(r.timestamp) >= dayStart &&
         new Date(r.timestamp) <= dayEnd
       );
@@ -254,8 +259,7 @@ export default async function AdminPage() {
     employees: employeesData,
   };
 
-  // 祝日一覧取得（祝日管理タブ用）
-  const allHolidays = await prisma.holiday.findMany({ orderBy: { date: 'asc' } });
+  // 祝日一覧
   const serializedHolidays = allHolidays.map(h => ({
     id: h.id,
     date: h.date.toISOString(),
