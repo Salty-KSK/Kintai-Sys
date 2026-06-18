@@ -67,6 +67,11 @@ export default function SummaryClient({
     }
   }, [dailySummaries]);
 
+  // データ更新後の再読み込み（loading.tsxを表示するため router.push を使用）
+  const refreshPage = () => {
+    router.push(`/summary?user=${selectedUser.id}&year=${year}&month=${month}&t=${Date.now()}`);
+  };
+
   const navigate = (userId?: string, y?: number, m?: number) => {
     const u = userId || selectedUser.id;
     const yr = y || year;
@@ -163,7 +168,7 @@ export default function SummaryClient({
       } else {
         await updateRecordTime(record.id, `${hh}:${mm}`, date);
       }
-      router.refresh();
+      refreshPage();
     });
   };
 
@@ -184,7 +189,7 @@ export default function SummaryClient({
 
     startTransition(async () => {
       await deleteRecord(record.id);
-      router.refresh();
+      refreshPage();
     });
   };
 
@@ -203,7 +208,7 @@ export default function SummaryClient({
       for (const r of dayRecords) {
         await deleteRecord(r.id);
       }
-      router.refresh();
+      refreshPage();
     });
   };
 
@@ -214,7 +219,7 @@ export default function SummaryClient({
     startTransition(async () => {
       await updateBreakTime(date, minutes, viewingUserId);
       setEditingCell(null);
-      router.refresh();
+      refreshPage();
     });
   };
 
@@ -236,7 +241,7 @@ export default function SummaryClient({
     startTransition(async () => {
       await setDailyStatus(date, statusType, note, viewingUserId);
       setEditingCell(null);
-      router.refresh();
+      refreshPage();
     });
   };
 
@@ -247,7 +252,7 @@ export default function SummaryClient({
       setFurikyuStep(null);
       setFurikyuDate('');
       setEditingCell(null);
-      router.refresh();
+      refreshPage();
     });
   };
 
@@ -258,7 +263,7 @@ export default function SummaryClient({
       setFurikyuStep(null);
       setFurikyuDate('');
       setEditingCell(null);
-      router.refresh();
+      refreshPage();
     });
   };
 
@@ -287,7 +292,7 @@ export default function SummaryClient({
     setEditingCell(null);
     startTransition(async () => {
       await setDayTypeOverride(date, newDayType, undefined, viewingUserId);
-      router.refresh();
+      refreshPage();
     });
   };
 
