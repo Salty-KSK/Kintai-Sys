@@ -1,8 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition, useRef, useEffect } from "react";
-import type { DailySummary, MonthlySummary } from "@/lib/summaryCalc";
+import { useState, useTransition, useEffect } from "react";
+import type { DailySummary, MonthlySummary, DayType } from "@/lib/summaryCalc";
+import { calculateDailySummary, calculateMonthlySummary, generateDateRange } from "@/lib/summaryCalc";
 import { FileDown, Check, X, Trash2 } from "lucide-react";
 import { updateRecordTime, deleteRecord, updateBreakTime, setDailyStatus, addRecord, setDayTypeOverride, setFurikyuWithOverride } from "@/app/actions";
 import OvertimeHeatmap from "@/app/admin/overtime-heatmap";
@@ -40,8 +41,8 @@ function fmtTotal(min: number): string {
 }
 
 export default function SummaryClient({
-  dailySummaries, monthlySummary, selectedUser, allUsers, year, month, isAdmin, periodStr,
-  records, canEdit, viewingUserId, sessionUserId, dayTypeOverrides
+  dailySummaries: initialDailySummaries, monthlySummary: initialMonthlySummary, selectedUser, allUsers, year, month, isAdmin, periodStr,
+  records: initialRecords, canEdit, viewingUserId, sessionUserId, dayTypeOverrides
 }: Props) {
   const router = useRouter();
   const [editingCell, setEditingCell] = useState<{ date: string; field: 'clockIn' | 'clockOut' | 'break' | 'status' | 'dayType' } | null>(null);
@@ -56,20 +57,50 @@ export default function SummaryClient({
   const [isPending, startTransition] = useTransition();
   const [activeTab, setActiveTab] = useState<'summary' | 'overtime'>('summary');
 
-  // 楽観的UI更新用: サーバーの応答を待たずに値を即座に表示
-  const [optimisticEdits, setOptimisticEdits] = useState<Record<string, { clockIn?: string; clockOut?: string }>>({});
-  const prevSummariesRef = useRef(dailySummaries);
-  useEffect(() => {
-    // サーバーデータが更新されたら楽観的更新をクリア
-    if (prevSummariesRef.current !== dailySummaries) {
-      setOptimisticEdits({});
-      prevSummariesRef.current = dailySummaries;
-    }
-  }, [dailySummaries]);
+  // ===== ローカルstate: サーバーを待たず即座に再計算 =====
+  const [localRecords, setLocalRecords] = useState(initialRecords);
+  const [dailySummaries, setDailySummaries] = useState(initialDailySummaries);
+  const [monthlySummary, setMonthlySummary] = useState(initialMonthlySummary);
 
-  // データ更新後の再読み込み（loading.tsxを表示するため router.push を使用）
-  const refreshPage = () => {
-    router.push(`/summary?user=${selectedUser.id}&year=${year}&month=${month}&t=${Date.now()}`);
+  // サーバーからpropsが更新されたら同期
+  useEffect(() => {
+    setLocalRecords(initialRecords);
+    setDailySummaries(initialDailySummaries);
+    setMonthlySummary(initialMonthlySummary);
+  }, [initialRecords, initialDailySummaries, initialMonthlySummary]);
+
+  // クライアント側で即座に集計を再計算する関数
+  const recalcSummaries = (updatedRecords: Record<string, RecordItem[]>) => {
+    const dates = generateDateRange(year, month);
+    // 祝日リストをdailySummariesから取得（初期データに含まれている）
+    const holidayDates = initialDailySummaries
+      .filter(d => d.isHoliday)
+      .map(d => {
+        const parts = d.date.split('/').map(Number);
+        return new Date(parts[0], parts[1] - 1, parts[2]);
+      });
+
+    const assignedIds = new Set<string>();
+    const newDailySummaries = dates.map(date => {
+      const dateStr = `${date.getFullYear()}/${(date.getMonth()+1).toString().padStart(2,'0')}/${date.getDate().toString().padStart(2,'0')}`;
+      const dayRecords = (updatedRecords[dateStr] || []).filter(r => !assignedIds.has(r.id));
+      dayRecords.forEach(r => assignedIds.add(r.id));
+
+      const recordsForCalc = dayRecords.map(r => ({
+        type: r.type,
+        timestamp: new Date(r.timestamp),
+        breakMinutes: r.breakMinutes,
+        note: r.note,
+      }));
+
+      const override = dayTypeOverrides[dateStr];
+      return calculateDailySummary(date, recordsForCalc, holidayDates, (override?.dayType as DayType) || null);
+    });
+
+    const newMonthlySummary = calculateMonthlySummary(newDailySummaries);
+    setDailySummaries(newDailySummaries);
+    setMonthlySummary(newMonthlySummary);
+    setLocalRecords(updatedRecords);
   };
 
   const navigate = (userId?: string, y?: number, m?: number) => {
@@ -120,7 +151,7 @@ export default function SummaryClient({
   const startBreakEdit = (d: DailySummary) => {
     if (!canEdit) return;
     // 休憩レコード探索
-    const dayRecords = records[d.date] || [];
+    const dayRecords = localRecords[d.date] || [];
     const breakRecord = dayRecords.find(r => r.type === 'BREAK_TIME');
     if (breakRecord && breakRecord.breakMinutes !== null) {
       setEditBreak(String(breakRecord.breakMinutes));
@@ -132,7 +163,7 @@ export default function SummaryClient({
 
   const startStatusEdit = (d: DailySummary) => {
     if (!canEdit) return;
-    const dayRecords = records[d.date] || [];
+    const dayRecords = localRecords[d.date] || [];
     const statusRecord = dayRecords.find(r => r.type.startsWith('STATUS_'));
     if (statusRecord) {
       setEditStatus(statusRecord.type);
@@ -147,18 +178,33 @@ export default function SummaryClient({
   const saveClockEdit = () => {
     if (!editingCell) return;
     const { date, field } = editingCell;
-    const dayRecords = records[date] || [];
+    const dayRecords = localRecords[date] || [];
     const targetType = field === 'clockIn' ? 'CLOCK_IN' : 'CLOCK_OUT';
     const record = dayRecords.find(r => r.type === targetType);
     const hh = editH.padStart(2, '0');
     const mm = editM.padStart(2, '0');
-    const displayTime = `${parseInt(hh)}:${mm}`;
 
-    // 楽観的更新: 先にUIを即座に更新して編集を閉じる
-    setOptimisticEdits(prev => ({
-      ...prev,
-      [date]: { ...prev[date], [field]: displayTime }
-    }));
+    // クライアント側で即座にレコードを更新して再計算
+    const parts = date.split('/').map(Number);
+    const dateObj = new Date(parts[0], parts[1] - 1, parts[2]);
+    const hourNum = parseInt(hh);
+    const tsDate = new Date(dateObj);
+    if (hourNum >= 24) {
+      tsDate.setDate(tsDate.getDate() + 1);
+      tsDate.setHours(hourNum - 24, parseInt(mm), 0, 0);
+    } else {
+      tsDate.setHours(hourNum, parseInt(mm), 0, 0);
+    }
+    const newTimestamp = new Date(tsDate.getTime() - 9 * 60 * 60 * 1000).toISOString();
+
+    let updatedDayRecords: RecordItem[];
+    if (record) {
+      updatedDayRecords = dayRecords.map(r => r.id === record.id ? { ...r, timestamp: newTimestamp } : r);
+    } else {
+      updatedDayRecords = [...dayRecords, { id: `temp-${Date.now()}`, type: targetType, timestamp: newTimestamp, breakMinutes: null, note: null }];
+    }
+    const updatedRecords = { ...localRecords, [date]: updatedDayRecords };
+    recalcSummaries(updatedRecords);
     setEditingCell(null);
 
     // サーバー処理はバックグラウンドで実行
@@ -168,47 +214,43 @@ export default function SummaryClient({
       } else {
         await updateRecordTime(record.id, `${hh}:${mm}`, date);
       }
-      refreshPage();
+      router.refresh();
     });
   };
 
   const deleteClockRecord = () => {
     if (!editingCell) return;
     const { date, field } = editingCell;
-    const dayRecords = records[date] || [];
+    const dayRecords = localRecords[date] || [];
     const targetType = field === 'clockIn' ? 'CLOCK_IN' : 'CLOCK_OUT';
     const record = dayRecords.find(r => r.type === targetType);
     if (!record) { setEditingCell(null); return; }
 
-    // 楽観的更新
-    setOptimisticEdits(prev => ({
-      ...prev,
-      [date]: { ...prev[date], [field]: '' }
-    }));
+    // クライアント側で即座にレコードを削除して再計算
+    const updatedRecords = { ...localRecords, [date]: dayRecords.filter(r => r.id !== record.id) };
+    recalcSummaries(updatedRecords);
     setEditingCell(null);
 
     startTransition(async () => {
       await deleteRecord(record.id);
-      refreshPage();
+      router.refresh();
     });
   };
 
   const deleteDayRecords = (date: string) => {
-    const dayRecords = records[date] || [];
+    const dayRecords = localRecords[date] || [];
     if (dayRecords.length === 0) return;
     if (!confirm(`${date.slice(5)} のデータを全て削除しますか？`)) return;
 
-    // 楽観的更新
-    setOptimisticEdits(prev => ({
-      ...prev,
-      [date]: { clockIn: '', clockOut: '', break: '', status: '' }
-    }));
+    // クライアント側で即座に全レコードを削除して再計算
+    const updatedRecords = { ...localRecords, [date]: [] };
+    recalcSummaries(updatedRecords);
 
     startTransition(async () => {
       for (const r of dayRecords) {
         await deleteRecord(r.id);
       }
-      refreshPage();
+      router.refresh();
     });
   };
 
@@ -216,10 +258,25 @@ export default function SummaryClient({
     if (!editingCell) return;
     const { date } = editingCell;
     const minutes = editBreak === 'auto' ? null : parseInt(editBreak);
+
+    // クライアント側で即座に休憩レコードを更新して再計算
+    const dayRecords = localRecords[date] || [];
+    const breakRecord = dayRecords.find(r => r.type === 'BREAK_TIME');
+    let updatedDayRecords: RecordItem[];
+    if (breakRecord) {
+      updatedDayRecords = dayRecords.map(r => r.id === breakRecord.id ? { ...r, breakMinutes: minutes } : r);
+    } else if (minutes !== null) {
+      updatedDayRecords = [...dayRecords, { id: `temp-break-${Date.now()}`, type: 'BREAK_TIME', timestamp: new Date().toISOString(), breakMinutes: minutes, note: null }];
+    } else {
+      updatedDayRecords = dayRecords.filter(r => r.type !== 'BREAK_TIME');
+    }
+    const updatedRecords = { ...localRecords, [date]: updatedDayRecords };
+    recalcSummaries(updatedRecords);
+    setEditingCell(null);
+
     startTransition(async () => {
       await updateBreakTime(date, minutes, viewingUserId);
-      setEditingCell(null);
-      refreshPage();
+      router.refresh();
     });
   };
 
@@ -241,7 +298,7 @@ export default function SummaryClient({
     startTransition(async () => {
       await setDailyStatus(date, statusType, note, viewingUserId);
       setEditingCell(null);
-      refreshPage();
+      router.refresh();
     });
   };
 
@@ -252,7 +309,7 @@ export default function SummaryClient({
       setFurikyuStep(null);
       setFurikyuDate('');
       setEditingCell(null);
-      refreshPage();
+      router.refresh();
     });
   };
 
@@ -263,7 +320,7 @@ export default function SummaryClient({
       setFurikyuStep(null);
       setFurikyuDate('');
       setEditingCell(null);
-      refreshPage();
+      router.refresh();
     });
   };
 
@@ -292,7 +349,7 @@ export default function SummaryClient({
     setEditingCell(null);
     startTransition(async () => {
       await setDayTypeOverride(date, newDayType, undefined, viewingUserId);
-      refreshPage();
+      router.refresh();
     });
   };
 
@@ -542,8 +599,8 @@ export default function SummaryClient({
                 const isEditingStatus = editingCell?.date === d.date && editingCell.field === 'status';
 
                 // 楽観的更新値を優先表示
-                const displayClockIn = optimisticEdits[d.date]?.clockIn ?? d.clockIn;
-                const displayClockOut = optimisticEdits[d.date]?.clockOut ?? d.clockOut;
+                const displayClockIn = d.clockIn;
+                const displayClockOut = d.clockOut;
 
                 return (
                   <tr key={i} className={rowClass}>
@@ -750,7 +807,7 @@ export default function SummaryClient({
                             return parts.join(' / ') || '';
                           })()}
                           </span>
-                          {canEdit && (records[d.date] || []).length > 0 && (
+                          {canEdit && (localRecords[d.date] || []).length > 0 && (
                             <button
                               className="no-print"
                               onClick={(e) => { e.stopPropagation(); deleteDayRecords(d.date); }}
