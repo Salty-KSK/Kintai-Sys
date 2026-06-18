@@ -69,10 +69,10 @@ export default function SummaryClient({
     setMonthlySummary(initialMonthlySummary);
   }, [initialRecords, initialDailySummaries, initialMonthlySummary]);
 
-  // クライアント側で即座に集計を再計算する関数
+  // クライアント側で即座に集計を再計算する関数（サーバーのpage.tsxと同一ロジック）
   const recalcSummaries = (updatedRecords: Record<string, RecordItem[]>) => {
     const dates = generateDateRange(year, month);
-    // 祝日リストをdailySummariesから取得（初期データに含まれている）
+    // 祝日リストをinitialDailySummariesから取得
     const holidayDates = initialDailySummaries
       .filter(d => d.isHoliday)
       .map(d => {
@@ -80,10 +80,32 @@ export default function SummaryClient({
         return new Date(parts[0], parts[1] - 1, parts[2]);
       });
 
+    // 全レコードをフラットに展開（サーバーと同じく日付横断で割り当て）
+    const allRecords: (RecordItem & { _dateKey: string })[] = [];
+    for (const [dateKey, recs] of Object.entries(updatedRecords)) {
+      for (const r of recs) {
+        allRecords.push({ ...r, _dateKey: dateKey });
+      }
+    }
+
     const assignedIds = new Set<string>();
     const newDailySummaries = dates.map(date => {
-      const dateStr = `${date.getFullYear()}/${(date.getMonth()+1).toString().padStart(2,'0')}/${date.getDate().toString().padStart(2,'0')}`;
-      const dayRecords = (updatedRecords[dateStr] || []).filter(r => !assignedIds.has(r.id));
+      const y = date.getFullYear(), m = date.getMonth(), d = date.getDate();
+      const dateStr = `${y}/${(m+1).toString().padStart(2,'0')}/${d.toString().padStart(2,'0')}`;
+
+      // サーバーと同じ: 05:00 JST 〜 翌04:59 JST (厳密範囲) + 翌12:59 JST (CLOCK_OUT拡張)
+      const dayStart = new Date(Date.UTC(y, m, d, 5 - 9, 0, 0, 0));
+      const strictEnd = new Date(Date.UTC(y, m, d + 1, 4 - 9, 59, 59, 999));
+      const extendEnd = new Date(Date.UTC(y, m, d + 1, 12 - 9, 59, 59, 999));
+
+      const dayRecords = allRecords.filter(r => {
+        if (assignedIds.has(r.id)) return false;
+        const t = new Date(r.timestamp);
+        if (t < dayStart) return false;
+        if (t <= strictEnd) return true;
+        if (t <= extendEnd && r.type === 'CLOCK_OUT') return true;
+        return false;
+      });
       dayRecords.forEach(r => assignedIds.add(r.id));
 
       const recordsForCalc = dayRecords.map(r => ({
@@ -93,8 +115,26 @@ export default function SummaryClient({
         note: r.note,
       }));
 
+      // 当日のオーバーライド
       const override = dayTypeOverrides[dateStr];
-      return calculateDailySummary(date, recordsForCalc, holidayDates, (override?.dayType as DayType) || null);
+
+      // 翌暦日のdayTypeを計算（サーバーと同一ロジック）
+      const nextCalDate = new Date(y, m, d + 1);
+      const nextDow = nextCalDate.getDay();
+      let nextDayType: DayType = "weekday";
+      if (nextDow === 0) nextDayType = "sunday";
+      else if (nextDow === 6) nextDayType = "saturday";
+      const nextIsHoliday = holidayDates.some(h =>
+        h.getFullYear() === nextCalDate.getFullYear() &&
+        h.getMonth() === nextCalDate.getMonth() &&
+        h.getDate() === nextCalDate.getDate()
+      );
+      if (nextIsHoliday && nextDayType === "weekday") nextDayType = "holiday";
+      const nextDateStr = `${nextCalDate.getFullYear()}/${(nextCalDate.getMonth()+1).toString().padStart(2,'0')}/${nextCalDate.getDate().toString().padStart(2,'0')}`;
+      const nextOverride = dayTypeOverrides[nextDateStr];
+      if (nextOverride) nextDayType = nextOverride.dayType as DayType;
+
+      return calculateDailySummary(date, recordsForCalc, holidayDates, (override?.dayType as DayType) || null, nextDayType);
     });
 
     const newMonthlySummary = calculateMonthlySummary(newDailySummaries);
