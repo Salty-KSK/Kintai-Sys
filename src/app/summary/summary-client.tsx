@@ -225,17 +225,11 @@ export default function SummaryClient({
     const mm = editM.padStart(2, '0');
 
     // クライアント側で即座にレコードを更新して再計算
+    // JST時刻をUTCに直接変換: Date.UTC(y, m, d, hour - 9, minute)
     const parts = date.split('/').map(Number);
-    const dateObj = new Date(parts[0], parts[1] - 1, parts[2]);
     const hourNum = parseInt(hh);
-    const tsDate = new Date(dateObj);
-    if (hourNum >= 24) {
-      tsDate.setDate(tsDate.getDate() + 1);
-      tsDate.setHours(hourNum - 24, parseInt(mm), 0, 0);
-    } else {
-      tsDate.setHours(hourNum, parseInt(mm), 0, 0);
-    }
-    const newTimestamp = new Date(tsDate.getTime() - 9 * 60 * 60 * 1000).toISOString();
+    const minNum = parseInt(mm);
+    const newTimestamp = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2], hourNum - 9, minNum, 0, 0)).toISOString();
 
     let updatedDayRecords: RecordItem[];
     if (record) {
